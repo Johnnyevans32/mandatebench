@@ -5,17 +5,31 @@
   "license": "MIT",
   "author": "Evans Eburu",
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "nest build",
+    "start": "nest start",
+    "start:dev": "nest start --watch",
+    "start:prod": "node dist/main",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "jest",
     "demo": "ts-node src/scripts/mandate-demo.ts",
     "scenario": "ts-node src/scripts/scenario-demo.ts",
+    "smoke:live": "ts-node src/scripts/smoke-live.ts",
     "stats-check": "ts-node src/scripts/stats-check.ts"
   },
   "dependencies": {
-    "dotenv": "^17.4.2"
+    "@nestjs/common": "^11.1.27",
+    "@nestjs/config": "^4.0.4",
+    "@nestjs/core": "^11.1.27",
+    "@nestjs/mongoose": "^11.0.4",
+    "@nestjs/platform-express": "^11.1.27",
+    "dotenv": "^17.4.2",
+    "mongoose": "^9.7.4",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.2"
   },
   "devDependencies": {
+    "@nestjs/cli": "^11.0.23",
+    "@nestjs/schematics": "^11.1.0",
     "@types/jest": "^30.0.0",
     "@types/node": "^22.10.7",
     "jest": "^30.0.0",

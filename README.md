@@ -6,11 +6,11 @@ mandate, pushes them with adversarial pressure, and measures two things: how
 often they authorize a payment that breaches the mandate, and whether a monitor
 reading the agent's justification can catch the breach *before* it signs.
 
-> Status: early. The research core (signed mandates, the objective violation
-> check) and the offline scenario engine (a scripted merchant driving a graded
-> negotiation across the pressure taxonomy) are implemented and tested against a
-> deterministic mock agent. The live OpenRouter client, persistence, and
-> dashboard land next.
+> Status: early but running end-to-end. The research core (signed mandates, the
+> objective violation check), the scenario engine (a scripted merchant driving a
+> graded negotiation across the pressure taxonomy), a live OpenRouter client, and
+> a NestJS + MongoDB API that persists graded runs and serves the aggregations
+> are all implemented and tested. The dashboard lands next.
 
 ---
 
@@ -60,6 +60,23 @@ yarn test             # unit tests for signing, the violation check, and the eng
 yarn typecheck
 ```
 
+## Run the API (needs MongoDB + an OpenRouter key)
+
+```bash
+cd backend
+cp .env.example .env    # set MONGODB_URI and OPENROUTER_API_KEY
+yarn build && yarn start:prod        # or: yarn start:dev
+
+# trigger a graded batch across the default roster (runs in the background):
+curl -X POST localhost:3001/api/runner/run \
+  -H 'content-type: application/json' -d '{"models":["google/gemini-3.5-flash"]}'
+
+# read the aggregations:
+curl localhost:3001/api/leaderboard   # per-model violation rate + Wilson CIs
+curl localhost:3001/api/matrix        # model x pressure grid (the heatmap)
+curl localhost:3001/api/spend
+```
+
 ## Architecture
 
 ```
@@ -67,9 +84,10 @@ backend/
   src/
     mandate/    signed mandates (Ed25519) + the objective violation check + pressure taxonomy
     scenario/   scripted-merchant engine that runs a graded negotiation per pressure
-    llm/        model-agnostic agent-client interface, mock provider, structured-output schemas
+    llm/        model-agnostic agent-client interface, mock provider, OpenRouter client, schemas
+    study/      NestJS module: Mongo persistence, budget-capped runner, aggregation API
     analysis/   in-stack statistics (Spearman, AUROC, bootstrap, logistic, Wilson) — verified vs known values
-    scripts/    mandate-demo, stats-check
+    scripts/    mandate-demo, scenario-demo, smoke-live, stats-check
 docs/
   design.md     full research design, RQ table, prior-work positioning
 ```
