@@ -28,51 +28,18 @@ const DEFAULT_SUPPORTED = ['response_format', 'structured_outputs'];
 
 export const DEFAULT_MODELS: ModelEntry[] = (
   [
-  // Cross-lab flagship roster: one top model per major lab (v2). Diversity across
-  // providers is the scientifically interesting axis for cross-play deception,
-  // so we deliberately avoid stacking multiple tiers of one family.
-  {
-    id: 'openai/gpt-5.5',
-    label: 'GPT-5.5',
-    family: 'openai',
-    tier: 'frontier',
-    color: '#a78bfa',
-  },
-  {
-    id: 'anthropic/claude-opus-4.8',
-    label: 'Opus 4.8',
-    family: 'claude',
-    tier: 'frontier',
-    color: '#14b8a6',
-  },
-  {
-    id: 'google/gemini-3.5-flash',
-    label: 'Gemini 3.5 Flash',
-    family: 'google',
-    tier: 'mid',
-    color: '#f472b6',
-  },
-  {
-    id: 'deepseek/deepseek-v4-pro',
-    label: 'DeepSeek V4 Pro',
-    family: 'deepseek',
-    tier: 'frontier',
-    color: '#38bdf8',
-  },
-  {
-    id: 'meta-llama/llama-4-maverick',
-    label: 'Llama 4 Maverick',
-    family: 'llama',
-    tier: 'mid',
-    color: '#f59e0b',
-  },
-  {
-    id: 'x-ai/grok-4.3',
-    label: 'Grok 4.3',
-    family: 'grok',
-    tier: 'mid',
-    color: '#f87171',
-  },
+  // Cross-lab frontier roster: the top current model from each major lab, across
+  // the US, China, and Europe. One flagship per company keeps provider diversity
+  // — the scientifically interesting axis — without stacking one family's tiers.
+  { id: 'openai/gpt-5.5', label: 'GPT-5.5', family: 'openai', tier: 'frontier', color: '#a78bfa' },
+  { id: 'anthropic/claude-opus-4.8', label: 'Claude Opus 4.8', family: 'anthropic', tier: 'frontier', color: '#d97757' },
+  { id: 'google/gemini-3.5-flash', label: 'Gemini 3.5 Flash', family: 'google', tier: 'frontier', color: '#4285f4' },
+  { id: 'deepseek/deepseek-v4-pro', label: 'DeepSeek V4 Pro', family: 'deepseek', tier: 'frontier', color: '#38bdf8' },
+  { id: 'x-ai/grok-4.3', label: 'Grok 4.3', family: 'xai', tier: 'frontier', color: '#e5e7eb' },
+  { id: 'meta-llama/llama-4-maverick', label: 'Llama 4 Maverick', family: 'meta', tier: 'frontier', color: '#0668E1' },
+  { id: 'qwen/qwen3.7-max', label: 'Qwen3.7 Max', family: 'qwen', tier: 'frontier', color: '#a855f7' },
+  { id: 'moonshotai/kimi-k2.6', label: 'Kimi K2.6', family: 'moonshot', tier: 'frontier', color: '#111827' },
+  { id: 'mistralai/mistral-large-2512', label: 'Mistral Large', family: 'mistral', tier: 'frontier', color: '#f59e0b' },
 ] as ModelEntry[]
 ).map((m) => ({
   ...m,
