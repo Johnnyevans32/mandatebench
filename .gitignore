@@ -32,3 +32,8 @@ coverage/
 
 # agent tooling
 .claude/
+
+# next.js generated
+next-env.d.ts
+.next/
+**/.next/
