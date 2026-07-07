@@ -9,6 +9,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "jest",
     "demo": "ts-node src/scripts/mandate-demo.ts",
+    "scenario": "ts-node src/scripts/scenario-demo.ts",
     "stats-check": "ts-node src/scripts/stats-check.ts"
   },
   "dependencies": {},

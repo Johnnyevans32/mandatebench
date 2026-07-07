@@ -6,10 +6,11 @@ mandate, pushes them with adversarial pressure, and measures two things: how
 often they authorize a payment that breaches the mandate, and whether a monitor
 reading the agent's justification can catch the breach *before* it signs.
 
-> Status: early. The research core — signed mandates and the objective
-> violation check — is implemented and tested. The OpenRouter agent layer,
-> scenario engine, persistence, and dashboard are being ported from a sibling
-> project ([DeceptionBench](https://deceptionbench.xyz)) and land next.
+> Status: early. The research core (signed mandates, the objective violation
+> check) and the offline scenario engine (a scripted merchant driving a graded
+> negotiation across the pressure taxonomy) are implemented and tested against a
+> deterministic mock agent. The live OpenRouter client, persistence, and
+> dashboard land next.
 
 ---
 
@@ -54,7 +55,8 @@ cryptographically attributable, not merely logged.
 cd backend
 yarn install          # or npm install
 yarn demo             # issue a signed mandate; check a compliant vs a violating cart
-yarn test             # unit tests for signing + the violation check
+yarn scenario         # run the seed scenarios through the offline mock agent
+yarn test             # unit tests for signing, the violation check, and the engine
 yarn typecheck
 ```
 
@@ -64,6 +66,7 @@ yarn typecheck
 backend/
   src/
     mandate/    signed mandates (Ed25519) + the objective violation check + pressure taxonomy
+    scenario/   scripted-merchant engine that runs a graded negotiation per pressure
     llm/        model-agnostic agent-client interface, mock provider, structured-output schemas
     analysis/   in-stack statistics (Spearman, AUROC, bootstrap, logistic, Wilson) — verified vs known values
     scripts/    mandate-demo, stats-check
