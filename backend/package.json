@@ -1,0 +1,29 @@
+{
+  "name": "mandatebench-backend",
+  "version": "0.1.0",
+  "description": "Benchmark harness for mandate faithfulness and pre-signature monitorability of agentic-payment LLM agents.",
+  "license": "MIT",
+  "author": "Evans Eburu",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "jest",
+    "demo": "ts-node src/scripts/mandate-demo.ts",
+    "stats-check": "ts-node src/scripts/stats-check.ts"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@types/jest": "^30.0.0",
+    "@types/node": "^22.10.7",
+    "jest": "^30.0.0",
+    "ts-jest": "^29.2.5",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.7.3"
+  },
+  "jest": {
+    "preset": "ts-jest",
+    "testEnvironment": "node",
+    "roots": ["<rootDir>/src"],
+    "testMatch": ["**/*.spec.ts"]
+  }
+}

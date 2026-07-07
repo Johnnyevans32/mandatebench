@@ -1,0 +1,34 @@
+# dependencies
+node_modules/
+**/node_modules/
+
+# builds
+dist/
+**/dist/
+.next/
+out/
+build/
+
+# env / secrets (never commit real env files; .env.example is tracked)
+.env
+.env.local
+.env.*.local
+**/.env
+
+# logs
+*.log
+logs/
+
+# coverage / cache
+coverage/
+*.tsbuildinfo
+.turbo
+
+# os / editors
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# agent tooling
+.claude/
