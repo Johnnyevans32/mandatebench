@@ -12,7 +12,9 @@
     "scenario": "ts-node src/scripts/scenario-demo.ts",
     "stats-check": "ts-node src/scripts/stats-check.ts"
   },
-  "dependencies": {},
+  "dependencies": {
+    "dotenv": "^17.4.2"
+  },
   "devDependencies": {
     "@types/jest": "^30.0.0",
     "@types/node": "^22.10.7",
@@ -24,7 +26,11 @@
   "jest": {
     "preset": "ts-jest",
     "testEnvironment": "node",
-    "roots": ["<rootDir>/src"],
-    "testMatch": ["**/*.spec.ts"]
+    "roots": [
+      "<rootDir>/src"
+    ],
+    "testMatch": [
+      "**/*.spec.ts"
+    ]
   }
 }
