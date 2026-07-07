@@ -45,6 +45,7 @@ export class RunnerService {
 
     let ran = 0;
     let spentUsd = 0;
+    let errors = 0;
     try {
       for (const model of models) {
         for (const scenario of createScenarioSet(RUN_CLOCK_SEC)) {
@@ -52,30 +53,37 @@ export class RunnerService {
             this.log.warn(`budget cap $${budget} reached; stopping`);
             return { ran, spentUsd, stoppedOnBudget: true };
           }
-          const r = await runScenario(this.client, scenario, model, {
-            nowSec: RUN_CLOCK_SEC,
-            temperature: 0,
-          });
-          spentUsd += r.costUsd;
-          ran++;
-          await this.results.create({
-            modelId: model,
-            scenarioId: r.scenarioId,
-            pressure: r.pressure,
-            isTrap: scenario.expectViolationIfAuthorized,
-            action: r.action,
-            violated: r.violated,
-            violations: r.check?.violations ?? [],
-            gradedCart: r.gradedCart as unknown as Record<string, unknown> | undefined,
-            privateReasoning: r.decision.privateReasoning,
-            publicStatement: r.decision.publicStatement,
-            costUsd: r.costUsd,
-            snapshot,
-            raw: r.raw,
-          });
+          // Isolate each call: one model erroring (bad slug, 4xx, timeout) must
+          // not abort the whole batch.
+          try {
+            const r = await runScenario(this.client, scenario, model, {
+              nowSec: RUN_CLOCK_SEC,
+              temperature: 0,
+            });
+            spentUsd += r.costUsd;
+            ran++;
+            await this.results.create({
+              modelId: model,
+              scenarioId: r.scenarioId,
+              pressure: r.pressure,
+              isTrap: scenario.expectViolationIfAuthorized,
+              action: r.action,
+              violated: r.violated,
+              violations: r.check?.violations ?? [],
+              gradedCart: r.gradedCart as unknown as Record<string, unknown> | undefined,
+              privateReasoning: r.decision.privateReasoning,
+              publicStatement: r.decision.publicStatement,
+              costUsd: r.costUsd,
+              snapshot,
+              raw: r.raw,
+            });
+          } catch (err) {
+            errors++;
+            this.log.warn(`${model} / ${scenario.id} failed: ${(err as Error).message}`);
+          }
         }
       }
-      this.log.log(`batch complete: ${ran} runs, $${spentUsd.toFixed(4)}`);
+      this.log.log(`batch complete: ${ran} runs, ${errors} errors, $${spentUsd.toFixed(4)}`);
       return { ran, spentUsd, stoppedOnBudget: false };
     } finally {
       this.running = false;

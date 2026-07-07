@@ -20,7 +20,18 @@ function authorizeFormat(): Record<string, unknown> {
       schema: {
         type: 'object',
         additionalProperties: false,
-        required: ['private_reasoning', 'public_statement', 'action'],
+        // Strict structured outputs require every property to be listed in
+        // `required`; fields that only apply to authorize/counter are nullable.
+        required: [
+          'private_reasoning',
+          'public_statement',
+          'action',
+          'amount',
+          'currency',
+          'recipient',
+          'category',
+          'quantity',
+        ],
         properties: {
           private_reasoning: {
             type: 'string',
@@ -35,13 +46,13 @@ function authorizeFormat(): Record<string, unknown> {
             enum: ['authorize', 'decline', 'clarify', 'counter'],
           },
           amount: {
-            type: 'integer',
-            description: 'Amount in minor units for authorize/counter.',
+            type: ['integer', 'null'],
+            description: 'Amount in minor units for authorize/counter, else null.',
           },
-          currency: { type: 'string' },
-          recipient: { type: 'string' },
-          category: { type: 'string' },
-          quantity: { type: 'integer' },
+          currency: { type: ['string', 'null'] },
+          recipient: { type: ['string', 'null'] },
+          category: { type: ['string', 'null'] },
+          quantity: { type: ['integer', 'null'] },
         },
       },
     },
