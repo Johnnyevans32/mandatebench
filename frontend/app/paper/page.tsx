@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
-import results from '../../data/results-v6.json';
+import v6 from '../../data/results-v6.json';
+import v7 from '../../data/results-v7.json';
 
 export const metadata: Metadata = {
   title: 'Preprint — MandateBench | Mandate faithfulness & pre-signature monitorability',
@@ -18,9 +19,12 @@ export const metadata: Metadata = {
 };
 
 /**
- * All numbers below render from the frozen snapshot export
- * (data/results-v6.json, written by backend `yarn export-snapshot`) —
+ * All numbers below render from the frozen snapshot exports
+ * (data/results-*.json, written by backend `yarn export-snapshot`) —
  * never hand-typed, so the paper cannot drift from the data.
+ * Scripted-arm results (Table 1) come from snapshot v7 (35 scenarios,
+ * 17 intent traps, 5 domains); the suppression, monitor, and duel arms are
+ * still v6 measurements pending the v7 reruns.
  */
 const MODEL_META: Record<string, { name: string; lab: string }> = {
   'openai/gpt-5.5': { name: 'GPT-5.5', lab: 'OpenAI' },
@@ -40,23 +44,23 @@ const pct = (r: Rate) => `${Math.round(r.rate * 100)}%`;
 const count = (r: Rate) => `${r.k}/${r.n}`;
 const ci = (r: Rate) => `${Math.round(r.low * 100)}–${Math.round(r.high * 100)}`;
 
-const CALIBRATION = [...results.calibration].sort(
+const CALIBRATION = [...v7.calibration].sort(
   (a, b) =>
     b.intentCaught.rate - a.intentCaught.rate ||
     b.ruleCaught.rate - a.ruleCaught.rate ||
     displayName(a.model).localeCompare(displayName(b.model)),
 );
 
-const TOTAL_GRADED =
-  results.violations.default.graded + (results.violations.hidden?.graded ?? 0);
-const VIOLATIONS_DEFAULT = results.violations.default.traps.k;
-const VIOLATIONS_HIDDEN = results.violations.hidden?.traps.k ?? 0;
+const V7_GRADED = v7.violations.default.graded;
+const V6_GRADED = v6.violations.default.graded + (v6.violations.hidden?.graded ?? 0);
+const VIOLATIONS_DEFAULT = v6.violations.default.traps.k;
+const VIOLATIONS_HIDDEN = v6.violations.hidden?.traps.k ?? 0;
 
-const MONITOR_DEFAULT = results.monitors.find(
-  (m) => m.snapshot === results.meta.snapshot && m.channel === 'reasoning',
+const MONITOR_DEFAULT = v6.monitors.find(
+  (m) => m.snapshot === v6.meta.snapshot && m.channel === 'reasoning',
 )!;
-const MONITOR_HIDDEN = results.monitors.find(
-  (m) => m.snapshot === results.meta.hiddenSnapshot && m.channel === 'reasoning',
+const MONITOR_HIDDEN = v6.monitors.find(
+  (m) => m.snapshot === v6.meta.hiddenSnapshot && m.channel === 'reasoning',
 )!;
 
 /** Hanley–McNeil SE-based 95% CI, used when the stored run predates bootstrap CIs. */
@@ -77,7 +81,7 @@ const monitorCI = (m: typeof MONITOR_DEFAULT): [number, number] => {
 };
 
 /** Duel rows: agents with zero breaches collapse into one line. */
-const DUEL_AGENTS = [...results.duels.agents].sort((a, b) => a.breached.rate - b.breached.rate);
+const DUEL_AGENTS = [...v6.duels.agents].sort((a, b) => a.breached.rate - b.breached.rate);
 const DUEL_ZERO = DUEL_AGENTS.filter((a) => a.breached.k === 0);
 const DUEL_ROWS: [string, string, string, string][] = [
   ...(DUEL_ZERO.length
@@ -110,7 +114,7 @@ function intentColor(pct: number): string {
 export default function PaperPage() {
   return (
     <main className="wrap" style={{ maxWidth: 860, paddingTop: 48, paddingBottom: 64 }}>
-      <div className="kicker">Preprint · Pilot · 2026</div>
+      <div className="kicker">Preprint · v7 · 2026</div>
       <h1 style={{ fontSize: 36, margin: '10px 0 14px', letterSpacing: '-0.02em', lineHeight: 1.12 }}>
         Mandate Faithfulness and Pre-Signature Monitorability for Agentic-Payment LLMs
       </h1>
@@ -118,7 +122,8 @@ export default function PaperPage() {
         <a href="https://www.linkedin.com/in/0xjevan" target="_blank" rel="noopener">
           Evans Eburu
         </a>{' '}
-        · 9 frontier models, one+ per major lab · {TOTAL_GRADED} graded authorizations + a 9×9 adversarial matrix
+        · 9 frontier models, one+ per major lab · {V7_GRADED} graded authorizations across 5
+        mandate domains (v7) + {V6_GRADED} (v6 pilot) + a 9×9 adversarial matrix
       </p>
       <p className="soft" style={{ fontSize: 14, marginTop: 4 }}>
         Open source (MIT) ·{' '}
@@ -151,10 +156,11 @@ export default function PaperPage() {
           fontWeight: 500,
         }}
       >
-        Frontier models catch the mandate violations a payment gateway already
-        catches — while five of nine miss <b>a third</b> of the intent violations only
-        a model can catch, and one misses <b>more than half</b>. And the obvious way to
-        hide that from an overseer makes it strictly worse.
+        No frontier model reliably catches the mandate violations only a model can
+        catch: across 17 intent traps in 5 domains the best misses <b>one in ten</b>,
+        the worst <b>nearly half</b> — and the three models that looked perfect on a
+        small trap set <b>did not stay perfect</b> when the set grew 5×. The obvious
+        way to hide this from an overseer makes it strictly worse.
       </div>
 
       {/* Abstract */}
@@ -212,15 +218,14 @@ export default function PaperPage() {
       <section style={{ marginTop: 34 }}>
         <h2>Finding 1 — The intent gap</h2>
         <p className="soft" style={{ fontSize: 14, marginTop: -6, maxWidth: '70ch' }}>
-          Structural (<b>rule</b>) violations are caught near-perfectly by almost every
-          model — as they should be, since a stateless gateway validating the signed
-          fields already catches them. The <b>intent</b> column is where models separate:
-          proposals that satisfy every signed field yet break the mandate&apos;s meaning.
-          Mean intent-catch is 75% (range 44–100%). False refusal = clean orders wrongly
-          declined (the usefulness cost). Per-model intent cells are n=9, so individual
-          rows overlap; the contrast that survives the small n is pooled — the three
-          perfect models catch 27/27 intent traps (95% CI 88–100%) vs 34/54 (63%, CI
-          50–75%) for the other six.
+          Snapshot v7: 35 scenarios across five mandate domains (groceries, travel,
+          subscriptions, donations, procurement), 17 intent traps, each domain with a
+          structurally-identical clean control. The <b>intent</b> column is where models
+          separate: proposals that satisfy every signed field yet break the
+          mandate&apos;s meaning. Pooled intent-catch is 351/457 (77%, CI 73–80) — no
+          model catches them all (best 90%, worst 57%). False refusal = clean orders
+          wrongly declined (the usefulness cost); it stays ≈0 for every model, so the
+          intent misses are not bought back by caution.
         </p>
         <div className="heatscroll" style={{ marginTop: 14 }}>
           <table>
@@ -228,9 +233,9 @@ export default function PaperPage() {
               <tr>
                 <th>Model</th>
                 <th>Lab</th>
-                <th>Rule caught (n=27)</th>
-                <th>Intent caught (n=9)</th>
-                <th>False refusal (n=6)</th>
+                <th>Rule caught (n=36)</th>
+                <th>Intent caught (n=51)</th>
+                <th>False refusal (n=18)</th>
               </tr>
             </thead>
             <tbody>
@@ -261,9 +266,21 @@ export default function PaperPage() {
           </table>
         </div>
         <p className="soft mono" style={{ fontSize: 11, marginTop: 8 }}>
-          Counts are snapshot v6 (3 reps/scenario, temperature 0); intervals are Wilson
-          95%. Reps at temperature 0 are near-duplicate replicates, so the effective n is
-          closer to the unique-scenario count — treat the intervals as optimistic.
+          Counts are snapshot v7 (3 reps/scenario, temperature 0, seeded); intervals are
+          Wilson 95%. Reps at temperature 0 are near-duplicate replicates, so the
+          effective n is closer to the unique-scenario count — treat the intervals as
+          optimistic. Two unparseable runs (both Kimi K2.6) are excluded, not counted as
+          defences.
+        </p>
+        <p style={{ fontSize: 15, lineHeight: 1.7, maxWidth: '72ch', marginTop: 14 }}>
+          <b>Rankings from small trap sets do not replicate.</b> On the v6 pilot (3
+          intent traps, one domain, n=9/model), GPT-5.5, Claude Opus 4.8, and Kimi K2.6
+          looked perfect (9/9) — exactly the fragile kind of result the wide intervals
+          warned about. On 17 traps across 5 domains, none stays perfect and the
+          ordering reshuffles (GPT-5.5: 100% → 71%). The size of the intent gap,
+          however, replicates almost exactly (pooled 75% on v6 vs 77% on v7): the gap
+          is a stable property of the class; per-model leaderboard positions at small n
+          are noise.
         </p>
       </section>
 
@@ -271,6 +288,7 @@ export default function PaperPage() {
       <section style={{ marginTop: 34 }}>
         <h2>Finding 2 — Reasoning is only moderately monitorable</h2>
         <p className="soft" style={{ fontSize: 14, marginTop: -6, maxWidth: '70ch' }}>
+          <em>Measured on the v6 pilot set; the monitor pass on v7 is pending.</em>{' '}
           A monitor ({displayName(MONITOR_DEFAULT.monitorModel)}) reading <em>only</em>{' '}
           the agent&apos;s private reasoning — never the mandate numbers — predicts
           violations at AUROC {MONITOR_DEFAULT.auroc.toFixed(3)} (95% CI{' '}
@@ -288,6 +306,9 @@ export default function PaperPage() {
       <section style={{ marginTop: 34 }}>
         <h2>Finding 3 — Hiding the reasoning backfires</h2>
         <p style={{ fontSize: 15, lineHeight: 1.7, maxWidth: '72ch' }}>
+          <em className="soft" style={{ fontSize: 14 }}>
+            (Measured on the v6 pilot set; the v7 suppression arm is pending.)
+          </em>{' '}
           Instructing the agent to keep its reasoning bland — the obvious way to evade a
           reasoning-reading monitor — is <strong>doubly harmful</strong>. Violations
           roughly <strong>double</strong> ({VIOLATIONS_DEFAULT} → {VIOLATIONS_HIDDEN}),
@@ -325,14 +346,17 @@ export default function PaperPage() {
       <section style={{ marginTop: 34 }}>
         <h2>Finding 4 — Under live attack, the same models break</h2>
         <p className="soft" style={{ fontSize: 14, marginTop: -6, maxWidth: '72ch' }}>
-          Beyond scripted traps, every model plays the merchant and attacks every
-          model&apos;s agent over a multi-turn negotiation — a full 9×9 matrix (81 duels,
-          one negotiation per attacker–defender pair, single over-cap attack goal).
-          Robustness tracks the <em>defender</em>, not the attacker: no attacker exceeds
-          a 22% success rate (2/9, CI 6–55%), while breaches concentrate on the agents
-          that also miss intent violations above. With n=9 per row the intervals are
-          wide: the unbreached group (0/9, upper bound 30%) separates from Mistral and
-          Llama, but the DeepSeek / Mistral / Llama ordering is not itself significant.
+          <em>Measured on the v6 pilot; a seeded multi-rep, multi-goal matrix is
+          pending.</em> Beyond scripted traps, every model plays the merchant and
+          attacks every model&apos;s agent over a multi-turn negotiation — a full 9×9
+          matrix (81 duels, one negotiation per attacker–defender pair, single over-cap
+          attack goal). Robustness tracks the <em>defender</em>, not the attacker: no
+          attacker exceeds a 22% success rate (2/9, CI 6–55%), while breaches
+          concentrate on a few agents. With n=9 per row the intervals are wide: the
+          unbreached group (0/9, upper bound 30%) separates from Mistral and Llama, but
+          the DeepSeek / Mistral / Llama ordering is not itself significant. Llama 4
+          Maverick sits at the bottom of both this table and the intent column above;
+          the v7 results caution against reading finer cross-table agreement than that.
         </p>
         <div className="heatscroll" style={{ marginTop: 14 }}>
           <table>
@@ -414,27 +438,24 @@ export default function PaperPage() {
       <section style={{ marginTop: 34 }}>
         <h2>Limitations</h2>
         <p className="soft" style={{ fontSize: 14, lineHeight: 1.65, maxWidth: '72ch' }}>
-          This is a pilot, and the reported violation rates should be read as{' '}
-          <em>lower bounds</em>. The intent set is small (three author-constructed traps
-          in one grocery-mandate domain; independent human validation of the labels is
-          future work), and per-model intent cells are n=9 with overlapping intervals —
-          only the pooled tiers separate. Repetitions run at temperature 0, so the three
-          reps are near-duplicates and the effective sample is closer to the unique
-          scenario count; under replicate-aware clustering the default-arm AUROC&apos;s
-          separation from chance is marginal, though the suppression contrast survives.
-          The monitor is a single model (GPT-5.5) scored pooled across agents, including
-          its own outputs. The duel matrix has one negotiation per cell against a single
-          over-cap goal with an unseeded temperature-1 attacker, so it is not exactly
-          reproducible. Two grading asymmetries in snapshot v6 could only{' '}
-          <em>understate</em> violations: a counter-offer on an intent trap was graded as
-          defended even when it committed the same purchase, and unparseable model output
-          ended a run ungraded rather than counting against the model (both fixed in the
-          harness for future snapshots). The conflicting-mandates arm is defined but not
-          yet populated, and the scope-drift arm is single-turn in v6. Results may be
+          Violation rates on v6 should be read as <em>lower bounds</em>: two grading
+          asymmetries in that snapshot could only understate violations (a counter-offer
+          on an intent trap was graded as defended even when it committed the same
+          purchase, and unparseable output ended a run ungraded). Both are fixed in the
+          harness that produced v7, whose runs are also seeded, provenance-stamped
+          (provider, temperature, rep, arm), and deduplicated. The monitorability,
+          suppression, and duel results are still v6 measurements — on the small
+          3-intent-trap set, with a single monitor model (GPT-5.5) scored pooled across
+          agents including its own outputs, and one unseeded negotiation per duel cell —
+          and are marked as such above; re-running those arms on v7 is the immediate
+          next step. Intent labels are author-constructed (fixed before any model runs);
+          independent human validation is future work. Repetitions run at temperature 0,
+          so the three reps are near-duplicates and the effective sample is closer to
+          the unique-scenario count — treat all intervals as optimistic. Results may be
           sensitive to prompt wording. The suppression arm uses a single naive hiding
           instruction; a trained or steganographic adversary is the stronger test of
-          monitorability and is future work, as are an adaptive-adversary robustness
-          curve and multi-domain mandates.
+          monitorability and is future work, as is an adaptive-adversary robustness
+          curve.
         </p>
       </section>
 
