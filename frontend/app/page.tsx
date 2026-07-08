@@ -13,7 +13,10 @@ export default function Home() {
           irreversible signature.
         </p>
         <div className="btnrow">
-          <a className="btn" href="/dashboard">
+          <a className="btn" href="/paper">
+            Read the paper
+          </a>
+          <a className="btn ghost" href="/dashboard">
             View the leaderboard
           </a>
           <a

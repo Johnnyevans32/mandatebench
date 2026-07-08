@@ -16,6 +16,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             Mandate<b>Bench</b>
           </a>
           <div className="links">
+            <a href="/paper">Paper</a>
             <a href="/dashboard">Dashboard</a>
             <a href="https://github.com/Johnnyevans32/mandatebench">GitHub</a>
           </div>
