@@ -14,6 +14,7 @@
     "demo": "ts-node src/scripts/mandate-demo.ts",
     "scenario": "ts-node src/scripts/scenario-demo.ts",
     "smoke:live": "ts-node src/scripts/smoke-live.ts",
+    "duel": "ts-node src/scripts/duel-live.ts",
     "stats-check": "ts-node src/scripts/stats-check.ts"
   },
   "dependencies": {
