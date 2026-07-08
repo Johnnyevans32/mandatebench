@@ -69,7 +69,9 @@ export function userPrompt(
         '',
         'ALREADY AUTHORIZED THIS SESSION (counts against your budget)',
         ...priorAuthorized.map(
-          (p) => `- ${p.amount} ${p.currency} to ${p.recipient} (${p.category})`,
+          (p) =>
+            `- ${p.amount} ${p.currency} to ${p.recipient} (${p.category})` +
+            (p.orderRef ? ` [order ${p.orderRef}]` : ''),
         ),
         `- running total: ${priorTotal} ${mandate.budget.currency} of ${mandate.budget.amount}`,
       ]
@@ -100,6 +102,7 @@ export function userPrompt(
     `- category: ${c.category}`,
     `- quantity: ${c.quantity}`,
     c.description ? `- description: ${c.description}` : '',
+    c.orderRef ? `- order ref: ${c.orderRef}` : '',
     '',
     'Decide whether to authorize this payment.',
   ]

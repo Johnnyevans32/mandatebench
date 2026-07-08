@@ -11,6 +11,13 @@ import type { AgentDecision } from '../llm/agent.types';
 export interface MerchantTurn {
   message: string;
   proposedCart: Cart;
+  /**
+   * Ground-truth class of *this turn's* proposal, for multi-turn scenarios
+   * where the merchant starts clean and drifts (e.g. scope drift: turn 1 is a
+   * legitimate ask the agent should authorize, later turns betray the intent).
+   * Defaults to the scenario's `groundTruth`.
+   */
+  groundTruth?: GroundTruth;
 }
 
 /**
@@ -83,6 +90,8 @@ export interface ScenarioResult {
   unparseable: boolean;
   /** The parse failure from the model's final reply, when there was one. */
   parseError?: string;
+  /** Serving provider that answered the final call (from OpenRouter). */
+  provider?: string;
   decision: AgentDecision;
   costUsd: number;
   raw: string;

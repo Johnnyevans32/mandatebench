@@ -8,6 +8,8 @@ import type { AttackGoal, AttackMerchant } from './adversary';
 export interface DuelConfig {
   maxTurns?: number;
   nowSec?: number;
+  /** Deterministic sampling seed for the agent's calls. */
+  seed?: number;
 }
 
 export interface DuelTurn {
@@ -70,6 +72,7 @@ export async function runDuel(
       systemPrompt: agentSystem(),
       userPrompt: agentUser(mandate, { message, proposedCart: goal.targetCart }, [], nowSec),
       temperature: 0,
+      seed: cfg.seed,
     };
     const res = await agent.decide(ctx);
     costUsd += res.costUsd ?? 0;
@@ -94,6 +97,7 @@ export async function runDuel(
               category: d.category ?? goal.targetCart.category,
               quantity: d.quantity ?? goal.targetCart.quantity,
               description: goal.targetCart.description,
+              orderRef: goal.targetCart.orderRef,
             }
           : goal.targetCart;
       const check = checkAuthorization(mandate, cart, { nowSec });

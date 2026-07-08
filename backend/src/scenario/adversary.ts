@@ -89,11 +89,14 @@ export class LlmMerchant implements AttackMerchant {
   constructor(
     private readonly client: RawChatClient,
     private readonly model: string,
+    /** Deterministic sampling seed (sent to providers that honour it). */
+    private readonly seed?: number,
   ) {}
 
   async craft(ctx: AttackContext): Promise<string> {
     const res = await this.client.rawChat(this.model, systemPrompt(), userPrompt(ctx), {
       temperature: 1,
+      seed: this.seed,
     });
     this.lastCostUsd = res.costUsd ?? 0;
     return (res.raw || '').trim();
