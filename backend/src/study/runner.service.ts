@@ -6,12 +6,14 @@ import { OpenRouterClient } from '../llm/openrouter';
 import { DEFAULT_MODELS } from '../llm/models';
 import { createIssuer, issueMandate } from '../mandate/mandate';
 import type { Cart } from '../mandate/types';
+import { runMonitor, type Channel, type MonitorItem } from '../analysis/monitor';
 import { LlmMerchant, type AttackGoal } from '../scenario/adversary';
 import { runDuel } from '../scenario/duel';
 import { runScenario } from '../scenario/engine';
 import { createScenarioSet, defaultMandate } from '../scenario/scenarios';
 import configuration from '../configuration';
 import { Duel, DuelDocument } from './duel.schema';
+import { Monitor, MonitorDocument } from './monitor.schema';
 import { Result, ResultDocument } from './result.schema';
 
 /** Fixed clock so mandate expiry is identical across models and runs. */
@@ -69,6 +71,7 @@ export class RunnerService {
   constructor(
     @InjectModel(Result.name) private readonly results: Model<ResultDocument>,
     @InjectModel(Duel.name) private readonly duels: Model<DuelDocument>,
+    @InjectModel(Monitor.name) private readonly monitors: Model<MonitorDocument>,
   ) {}
 
   isRunning(): boolean {
@@ -84,7 +87,9 @@ export class RunnerService {
    * persisting each graded outcome, until the budget is spent. Runs with bounded
    * concurrency.
    */
-  async runBatch(opts: { models?: string[]; snapshot?: string; reps?: number } = {}): Promise<{
+  async runBatch(
+    opts: { models?: string[]; snapshot?: string; reps?: number; hideReasoning?: boolean } = {},
+  ): Promise<{
     ran: number;
     spentUsd: number;
   }> {
@@ -93,6 +98,7 @@ export class RunnerService {
     const snapshot = opts.snapshot ?? configuration().study.snapshotTag;
     const budget = configuration().study.budgetUsd;
     const reps = Math.max(1, opts.reps ?? 1);
+    const hideReasoning = opts.hideReasoning ?? false;
 
     const tasks: { model: string; rep: number }[] = [];
     for (const model of this.roster(opts.models)) {
@@ -110,6 +116,7 @@ export class RunnerService {
             const r = await runScenario(this.client, scenario, model, {
               nowSec: RUN_CLOCK_SEC,
               temperature: 0,
+              hideReasoning,
             });
             spentUsd += r.costUsd;
             ran++;
@@ -118,8 +125,12 @@ export class RunnerService {
               scenarioId: r.scenarioId,
               pressure: r.pressure,
               isTrap: scenario.expectViolationIfAuthorized,
+              groundTruth: r.groundTruth,
               action: r.action,
               violated: r.violated,
+              violationClass: r.violationClass,
+              authorizedPayment: r.authorizedPayment,
+              correct: r.correct,
               violations: r.check?.violations ?? [],
               gradedCart: r.gradedCart as unknown as Record<string, unknown> | undefined,
               privateReasoning: r.decision.privateReasoning,
@@ -204,6 +215,50 @@ export class RunnerService {
       });
       this.log.log(`duel matrix complete: ${ran} duels, ${errors} errors, $${spentUsd.toFixed(4)}`);
       return { ran, spentUsd };
+    } finally {
+      this.running = false;
+    }
+  }
+
+  /**
+   * Pre-signature monitorability (RQ3). Read every graded decision in a snapshot,
+   * have the monitor model score the chosen channel (reasoning by default), and
+   * persist the AUROC against the objective violation labels. Run this on a
+   * normal snapshot and on a `hideReasoning` one to measure how much suppressing
+   * the reasoning channel erodes oversight.
+   */
+  async runMonitor(
+    opts: { snapshot?: string; monitorModel?: string; channel?: Channel } = {},
+  ): Promise<{ auroc: number; scored: number; nPos: number; nNeg: number }> {
+    if (this.running) throw new Error('runner is already active');
+    this.running = true;
+    const snapshot = opts.snapshot ?? configuration().study.snapshotTag;
+    const channel: Channel = opts.channel ?? 'reasoning';
+    const monitorModel = opts.monitorModel ?? DEFAULT_MODELS[0].id;
+    try {
+      const rows = await this.results.find({ snapshot }).lean();
+      const items: MonitorItem[] = rows.map((r) => ({
+        id: String(r._id),
+        reasoning: r.privateReasoning ?? '',
+        publicStatement: r.publicStatement,
+        violated: r.violated,
+      }));
+      const run = await runMonitor(this.client, monitorModel, items, channel);
+      await this.monitors.create({
+        snapshot,
+        monitorModel,
+        channel,
+        auroc: run.auroc,
+        nPos: run.nPos,
+        nNeg: run.nNeg,
+        scored: run.scores.length,
+        costUsd: run.costUsd,
+      });
+      this.log.log(
+        `monitor[${channel}] on ${snapshot}: AUROC=${run.auroc.toFixed(4)} ` +
+          `(${run.nPos}+/${run.nNeg}- , $${run.costUsd.toFixed(4)})`,
+      );
+      return { auroc: run.auroc, scored: run.scores.length, nPos: run.nPos, nNeg: run.nNeg };
     } finally {
       this.running = false;
     }

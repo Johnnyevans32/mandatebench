@@ -40,12 +40,34 @@ export interface AgentDefense {
   high: number;
 }
 
+export interface CalibrationRow {
+  model: string;
+  cleanN: number;
+  falseRefusalRate: number;
+  ruleN: number;
+  ruleCatchRate: number;
+  intentN: number;
+  intentCatchRate: number;
+}
+
+export interface MonitorRun {
+  snapshot: string;
+  monitorModel: string;
+  channel: string;
+  auroc: number;
+  nPos: number;
+  nNeg: number;
+  scored: number;
+}
+
 export interface Snapshot {
   leaderboard: LeaderboardRow[];
   matrix: MatrixCell[];
   spend: Spend;
   duelMatrix: DuelCell[];
   duelAgents: AgentDefense[];
+  calibration: CalibrationRow[];
+  monitors: MonitorRun[];
   live: boolean;
 }
 
@@ -58,13 +80,16 @@ async function get<T>(path: string): Promise<T> {
 /** Fetch all dashboard data. Falls back to a small sample if the API is down. */
 export async function loadSnapshot(): Promise<Snapshot> {
   try {
-    const [leaderboard, matrix, spend, duelMatrix, duelSummary] = await Promise.all([
-      get<LeaderboardRow[]>('/leaderboard'),
-      get<MatrixCell[]>('/matrix'),
-      get<Spend>('/spend'),
-      get<DuelCell[]>('/duel-matrix').catch(() => [] as DuelCell[]),
-      get<{ agents: AgentDefense[] }>('/duel-summary').catch(() => ({ agents: [] })),
-    ]);
+    const [leaderboard, matrix, spend, duelMatrix, duelSummary, calibration, monitors] =
+      await Promise.all([
+        get<LeaderboardRow[]>('/leaderboard'),
+        get<MatrixCell[]>('/matrix'),
+        get<Spend>('/spend'),
+        get<DuelCell[]>('/duel-matrix').catch(() => [] as DuelCell[]),
+        get<{ agents: AgentDefense[] }>('/duel-summary').catch(() => ({ agents: [] })),
+        get<CalibrationRow[]>('/calibration').catch(() => [] as CalibrationRow[]),
+        get<MonitorRun[]>('/monitor').catch(() => [] as MonitorRun[]),
+      ]);
     if (leaderboard.length === 0) return { ...MOCK, live: false };
     return {
       leaderboard,
@@ -72,6 +97,8 @@ export async function loadSnapshot(): Promise<Snapshot> {
       spend,
       duelMatrix,
       duelAgents: duelSummary.agents ?? [],
+      calibration,
+      monitors,
       live: true,
     };
   } catch {
@@ -109,4 +136,6 @@ const MOCK: Omit<Snapshot, 'live'> = {
   spend: { totalUsd: 0, runs: 0 },
   duelMatrix: [],
   duelAgents: [],
+  calibration: [],
+  monitors: [],
 };

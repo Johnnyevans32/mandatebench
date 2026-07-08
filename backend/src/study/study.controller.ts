@@ -57,6 +57,34 @@ export class StudyController {
     return { started: true, snapshot: snapshot_ };
   }
 
+  @Get('calibration')
+  calibration(@Query('snapshot') snapshot?: string) {
+    return this.study.calibration(this.snap(snapshot));
+  }
+
+  @Post('runner/monitor')
+  monitor(
+    @Query('snapshot') snapshot?: string,
+    @Query('channel') channel?: string,
+    @Query('model') model?: string,
+  ) {
+    const snapshot_ = this.snap(snapshot);
+    if (this.runner.isRunning()) {
+      return { started: false, reason: 'runner already active' };
+    }
+    const ch = channel === 'public' ? 'public' : 'reasoning';
+    void this.runner
+      .runMonitor({ snapshot: snapshot_, channel: ch, monitorModel: model })
+      .then((r) => this.log.log(`monitor done: ${JSON.stringify(r)}`))
+      .catch((e) => this.log.error(`monitor failed: ${(e as Error).message}`));
+    return { started: true, snapshot: snapshot_, channel: ch };
+  }
+
+  @Get('monitor')
+  monitorRuns(@Query('snapshot') snapshot?: string) {
+    return this.study.monitorRuns(snapshot ? this.snap(snapshot) : undefined);
+  }
+
   @Get('duel-matrix')
   duelMatrix(@Query('snapshot') snapshot?: string) {
     return this.study.duelMatrix(this.snap(snapshot));
