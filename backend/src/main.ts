@@ -13,8 +13,10 @@ async function bootstrap() {
     credentials: true,
   });
 
-  await app.listen(config.port);
+  // Bind 0.0.0.0 so Fly's proxy (and any container host) can reach it, not just
+  // loopback. Port comes from PORT (Fly injects it via fly.toml [env]).
+  await app.listen(config.port, '0.0.0.0');
   // eslint-disable-next-line no-console
-  console.log(`MandateBench backend listening on :${config.port}`);
+  console.log(`MandateBench backend listening on 0.0.0.0:${config.port}`);
 }
 void bootstrap();
