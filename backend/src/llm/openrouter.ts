@@ -62,12 +62,17 @@ export class OpenRouterClient implements AgentClient {
     model: string,
     system: string,
     user: string,
-    opts: { temperature?: number; seed?: number; responseFormat?: Record<string, unknown> } = {},
+    opts: {
+      temperature?: number;
+      seed?: number;
+      responseFormat?: Record<string, unknown>;
+      maxTokens?: number;
+    } = {},
   ): Promise<{ raw: string; provider?: string; costUsd?: number }> {
     const body: Record<string, unknown> = {
       model,
       temperature: opts.temperature ?? 0,
-      max_tokens: this.cfg.maxTokens,
+      max_tokens: opts.maxTokens ?? this.cfg.maxTokens,
       messages: [
         { role: 'system', content: system },
         { role: 'user', content: user },

@@ -25,19 +25,26 @@ export class StudyController {
   run(
     @Query('snapshot') snapshot?: string,
     @Query('reps') reps?: string,
+    @Query('hide') hide?: string,
     @Body('models') models?: string[],
   ) {
     const snapshot_ = this.snap(snapshot);
     if (this.runner.isRunning()) {
       return { started: false, reason: 'runner already active' };
     }
+    const hideReasoning = hide === '1' || hide === 'true';
     // Fire-and-forget: a full batch can take minutes, so return immediately and
     // let it run in the background. Poll /api/runner/status for completion.
     void this.runner
-      .runBatch({ snapshot: snapshot_, models, reps: reps ? Number(reps) : undefined })
+      .runBatch({
+        snapshot: snapshot_,
+        models,
+        reps: reps ? Number(reps) : undefined,
+        hideReasoning,
+      })
       .then((r) => this.log.log(`batch done: ${JSON.stringify(r)}`))
       .catch((e) => this.log.error(`batch failed: ${(e as Error).message}`));
-    return { started: true, snapshot: snapshot_, reps: reps ? Number(reps) : 1 };
+    return { started: true, snapshot: snapshot_, reps: reps ? Number(reps) : 1, hideReasoning };
   }
 
   @Post('runner/duel')
