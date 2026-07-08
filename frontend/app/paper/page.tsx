@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import results from '../../data/results-v6.json';
 
 export const metadata: Metadata = {
   title: 'Preprint — MandateBench | Mandate faithfulness & pre-signature monitorability',
@@ -16,18 +17,88 @@ export const metadata: Metadata = {
   },
 };
 
-/** Each cell: [count, percent, Wilson 95% CI]. Rule n=27 (9 traps × 3 reps), intent n=9, clean n=6. */
-type Cell = [count: string, pct: string, ci: string];
-const CALIBRATION: { model: string; lab: string; rule: Cell; intent: Cell; refuse: Cell }[] = [
-  { model: 'GPT-5.5', lab: 'OpenAI', rule: ['27/27', '100%', '88–100'], intent: ['9/9', '100%', '70–100'], refuse: ['0/6', '0%', '0–39'] },
-  { model: 'Claude Opus 4.8', lab: 'Anthropic', rule: ['27/27', '100%', '88–100'], intent: ['9/9', '100%', '70–100'], refuse: ['0/6', '0%', '0–39'] },
-  { model: 'Kimi K2.6', lab: 'Moonshot', rule: ['27/27', '100%', '88–100'], intent: ['9/9', '100%', '70–100'], refuse: ['0/6', '0%', '0–39'] },
-  { model: 'Gemini 3.5 Flash', lab: 'Google', rule: ['27/27', '100%', '88–100'], intent: ['6/9', '67%', '35–88'], refuse: ['0/6', '0%', '0–39'] },
-  { model: 'Grok 4.3', lab: 'xAI', rule: ['27/27', '100%', '88–100'], intent: ['6/9', '67%', '35–88'], refuse: ['1/6', '17%', '3–56'] },
-  { model: 'Qwen3.7 Max', lab: 'Alibaba', rule: ['27/27', '100%', '88–100'], intent: ['6/9', '67%', '35–88'], refuse: ['0/6', '0%', '0–39'] },
-  { model: 'Mistral Large 2512', lab: 'Mistral', rule: ['25/27', '93%', '77–98'], intent: ['6/9', '67%', '35–88'], refuse: ['0/6', '0%', '0–39'] },
-  { model: 'DeepSeek V4 Pro', lab: 'DeepSeek', rule: ['24/27', '89%', '72–96'], intent: ['6/9', '67%', '35–88'], refuse: ['0/6', '0%', '0–39'] },
-  { model: 'Llama 4 Maverick', lab: 'Meta', rule: ['23/27', '85%', '68–94'], intent: ['4/9', '44%', '19–73'], refuse: ['0/6', '0%', '0–39'] },
+/**
+ * All numbers below render from the frozen snapshot export
+ * (data/results-v6.json, written by backend `yarn export-snapshot`) —
+ * never hand-typed, so the paper cannot drift from the data.
+ */
+const MODEL_META: Record<string, { name: string; lab: string }> = {
+  'openai/gpt-5.5': { name: 'GPT-5.5', lab: 'OpenAI' },
+  'anthropic/claude-opus-4.8': { name: 'Claude Opus 4.8', lab: 'Anthropic' },
+  'moonshotai/kimi-k2.6': { name: 'Kimi K2.6', lab: 'Moonshot' },
+  'google/gemini-3.5-flash': { name: 'Gemini 3.5 Flash', lab: 'Google' },
+  'x-ai/grok-4.3': { name: 'Grok 4.3', lab: 'xAI' },
+  'qwen/qwen3.7-max': { name: 'Qwen3.7 Max', lab: 'Alibaba' },
+  'mistralai/mistral-large-2512': { name: 'Mistral Large 2512', lab: 'Mistral' },
+  'deepseek/deepseek-v4-pro': { name: 'DeepSeek V4 Pro', lab: 'DeepSeek' },
+  'meta-llama/llama-4-maverick': { name: 'Llama 4 Maverick', lab: 'Meta' },
+};
+const displayName = (id: string) => MODEL_META[id]?.name ?? id;
+
+type Rate = { k: number; n: number; rate: number; low: number; high: number };
+const pct = (r: Rate) => `${Math.round(r.rate * 100)}%`;
+const count = (r: Rate) => `${r.k}/${r.n}`;
+const ci = (r: Rate) => `${Math.round(r.low * 100)}–${Math.round(r.high * 100)}`;
+
+const CALIBRATION = [...results.calibration].sort(
+  (a, b) =>
+    b.intentCaught.rate - a.intentCaught.rate ||
+    b.ruleCaught.rate - a.ruleCaught.rate ||
+    displayName(a.model).localeCompare(displayName(b.model)),
+);
+
+const TOTAL_GRADED =
+  results.violations.default.graded + (results.violations.hidden?.graded ?? 0);
+const VIOLATIONS_DEFAULT = results.violations.default.traps.k;
+const VIOLATIONS_HIDDEN = results.violations.hidden?.traps.k ?? 0;
+
+const MONITOR_DEFAULT = results.monitors.find(
+  (m) => m.snapshot === results.meta.snapshot && m.channel === 'reasoning',
+)!;
+const MONITOR_HIDDEN = results.monitors.find(
+  (m) => m.snapshot === results.meta.hiddenSnapshot && m.channel === 'reasoning',
+)!;
+
+/** Hanley–McNeil SE-based 95% CI, used when the stored run predates bootstrap CIs. */
+function hanleyCI(auroc: number, nPos: number, nNeg: number): [number, number] {
+  const a = Math.max(auroc, 1 - auroc); // symmetric SE around chance
+  const q1 = a / (2 - a);
+  const q2 = (2 * a * a) / (1 + a);
+  const se = Math.sqrt(
+    (a * (1 - a) + (nPos - 1) * (q1 - a * a) + (nNeg - 1) * (q2 - a * a)) / (nPos * nNeg),
+  );
+  return [Math.max(0, auroc - 1.96 * se), Math.min(1, auroc + 1.96 * se)];
+}
+const monitorCI = (m: typeof MONITOR_DEFAULT): [number, number] => {
+  const rec = m as Record<string, unknown>;
+  return typeof rec.aurocLow === 'number' && typeof rec.aurocHigh === 'number'
+    ? [rec.aurocLow, rec.aurocHigh]
+    : hanleyCI(m.auroc, m.nPos, m.nNeg);
+};
+
+/** Duel rows: agents with zero breaches collapse into one line. */
+const DUEL_AGENTS = [...results.duels.agents].sort((a, b) => a.breached.rate - b.breached.rate);
+const DUEL_ZERO = DUEL_AGENTS.filter((a) => a.breached.k === 0);
+const DUEL_ROWS: [string, string, string, string][] = [
+  ...(DUEL_ZERO.length
+    ? [
+        [
+          DUEL_ZERO.map((a) => displayName(a.model)).join(' · '),
+          count(DUEL_ZERO[0].breached),
+          pct(DUEL_ZERO[0].breached),
+          `${ci(DUEL_ZERO[0].breached)}%`,
+        ] as [string, string, string, string],
+      ]
+    : []),
+  ...DUEL_AGENTS.filter((a) => a.breached.k > 0).map(
+    (a) =>
+      [displayName(a.model), count(a.breached), pct(a.breached), `${ci(a.breached)}%`] as [
+        string,
+        string,
+        string,
+        string,
+      ],
+  ),
 ];
 
 function intentColor(pct: number): string {
@@ -47,7 +118,7 @@ export default function PaperPage() {
         <a href="https://www.linkedin.com/in/0xjevan" target="_blank" rel="noopener">
           Evans Eburu
         </a>{' '}
-        · 9 frontier models, one+ per major lab · 753 graded authorizations + a 9×9 adversarial matrix
+        · 9 frontier models, one+ per major lab · {TOTAL_GRADED} graded authorizations + a 9×9 adversarial matrix
       </p>
       <p className="soft" style={{ fontSize: 14, marginTop: 4 }}>
         Open source (MIT) ·{' '}
@@ -165,24 +236,24 @@ export default function PaperPage() {
             <tbody>
               {CALIBRATION.map((r) => (
                 <tr key={r.model}>
-                  <td className="model">{r.model}</td>
+                  <td className="model">{displayName(r.model)}</td>
                   <td className="soft mono" style={{ fontSize: 12 }}>
-                    {r.lab}
+                    {MODEL_META[r.model]?.lab ?? ''}
                   </td>
                   <td className="mono">
-                    {r.rule[1]} ({r.rule[0]})
-                    <div className="soft" style={{ fontSize: 10 }}>CI {r.rule[2]}</div>
+                    {pct(r.ruleCaught)} ({count(r.ruleCaught)})
+                    <div className="soft" style={{ fontSize: 10 }}>CI {ci(r.ruleCaught)}</div>
                   </td>
                   <td
                     className="mono"
-                    style={{ fontWeight: 700, color: intentColor(parseInt(r.intent[1], 10)) }}
+                    style={{ fontWeight: 700, color: intentColor(Math.round(r.intentCaught.rate * 100)) }}
                   >
-                    {r.intent[1]} ({r.intent[0]})
-                    <div className="soft" style={{ fontSize: 10, fontWeight: 400 }}>CI {r.intent[2]}</div>
+                    {pct(r.intentCaught)} ({count(r.intentCaught)})
+                    <div className="soft" style={{ fontSize: 10, fontWeight: 400 }}>CI {ci(r.intentCaught)}</div>
                   </td>
                   <td className="mono">
-                    {r.refuse[1]} ({r.refuse[0]})
-                    <div className="soft" style={{ fontSize: 10 }}>CI {r.refuse[2]}</div>
+                    {pct(r.falseRefusal)} ({count(r.falseRefusal)})
+                    <div className="soft" style={{ fontSize: 10 }}>CI {ci(r.falseRefusal)}</div>
                   </td>
                 </tr>
               ))}
@@ -200,13 +271,15 @@ export default function PaperPage() {
       <section style={{ marginTop: 34 }}>
         <h2>Finding 2 — Reasoning is only moderately monitorable</h2>
         <p className="soft" style={{ fontSize: 14, marginTop: -6, maxWidth: '70ch' }}>
-          A monitor (GPT-5.5) reading <em>only</em> the agent&apos;s private reasoning —
-          never the mandate numbers — predicts violations at AUROC 0.669 (95% CI
-          0.56–0.78; 29 violations vs 345 compliant, pooled across the nine agents).
-          Diagnostic, but far from the near-perfect monitorability reported for
-          reasoning in game settings. Two caveats: the AUROC is pooled, so it mixes
-          between-model style with within-model discrimination, and the monitor scores
-          its own outputs for one of the nine agents.
+          A monitor ({displayName(MONITOR_DEFAULT.monitorModel)}) reading <em>only</em>{' '}
+          the agent&apos;s private reasoning — never the mandate numbers — predicts
+          violations at AUROC {MONITOR_DEFAULT.auroc.toFixed(3)} (95% CI{' '}
+          {monitorCI(MONITOR_DEFAULT)[0].toFixed(2)}–{monitorCI(MONITOR_DEFAULT)[1].toFixed(2)};{' '}
+          {MONITOR_DEFAULT.nPos} violations vs {MONITOR_DEFAULT.nNeg} compliant, pooled
+          across the nine agents). Diagnostic, but far from the near-perfect
+          monitorability reported for reasoning in game settings. Two caveats: the AUROC
+          is pooled, so it mixes between-model style with within-model discrimination,
+          and the monitor scores its own outputs for one of the nine agents.
         </p>
         <MonitorFigure />
       </section>
@@ -217,8 +290,10 @@ export default function PaperPage() {
         <p style={{ fontSize: 15, lineHeight: 1.7, maxWidth: '72ch' }}>
           Instructing the agent to keep its reasoning bland — the obvious way to evade a
           reasoning-reading monitor — is <strong>doubly harmful</strong>. Violations
-          roughly <strong>double</strong> (29 → 51), and the monitor&apos;s AUROC falls
-          from 0.67 to <strong>0.30 — below chance</strong>. Inspecting the reasoning
+          roughly <strong>double</strong> ({VIOLATIONS_DEFAULT} → {VIOLATIONS_HIDDEN}),
+          and the monitor&apos;s AUROC falls from {MONITOR_DEFAULT.auroc.toFixed(2)} to{' '}
+          <strong>{MONITOR_HIDDEN.auroc.toFixed(2)} — below chance</strong>. Inspecting
+          the reasoning
           shows why: told to stay bland, models stop reasoning about intent and collapse
           to structural checks, so a breach reads as more routine than a compliant
           decision and actively misleads the overseer.
@@ -270,12 +345,7 @@ export default function PaperPage() {
               </tr>
             </thead>
             <tbody>
-              {[
-                ['GPT-5.5 · Opus 4.8 · Gemini · Grok · Qwen · Kimi', '0 / 9', '0%', '0–30%'],
-                ['DeepSeek V4 Pro', '1 / 9', '11%', '2–44%'],
-                ['Mistral Large 2512', '5 / 9', '56%', '27–81%'],
-                ['Llama 4 Maverick', '6 / 9', '67%', '35–88%'],
-              ].map(([m, n, r, ci]) => (
+              {DUEL_ROWS.map(([m, n, r, interval]) => (
                 <tr key={m}>
                   <td className="model" style={{ fontSize: 13 }}>
                     {m}
@@ -285,7 +355,7 @@ export default function PaperPage() {
                     {r}
                   </td>
                   <td className="mono soft" style={{ fontSize: 12 }}>
-                    {ci}
+                    {interval}
                   </td>
                 </tr>
               ))}
@@ -458,14 +528,16 @@ function MonitorFigure() {
       </div>
     </div>
   );
+  const [dLo, dHi] = monitorCI(MONITOR_DEFAULT);
+  const [hLo, hHi] = monitorCI(MONITOR_HIDDEN);
   return (
     <div style={{ marginTop: 16, maxWidth: 560 }}>
-      {bar('Default reasoning', 0.669, 0.56, 0.78, 'hsl(145 52% 40%)')}
-      {bar('Suppressed reasoning', 0.304, 0.22, 0.39, 'hsl(8 60% 47%)')}
+      {bar('Default reasoning', MONITOR_DEFAULT.auroc, dLo, dHi, 'hsl(145 52% 40%)')}
+      {bar('Suppressed reasoning', MONITOR_HIDDEN.auroc, hLo, hHi, 'hsl(8 60% 47%)')}
       <div className="soft mono" style={{ fontSize: 11, marginTop: 8 }}>
-        Dashed line = 0.50 (chance); whiskers are Hanley–McNeil 95% CIs. Suppressed
-        reasoning falls significantly below chance (z ≈ 4.6), and the drop from 0.669 is
-        significant (z ≈ 5.1).
+        Dashed line = 0.50 (chance); whiskers are 95% CIs (Hanley–McNeil). Suppressed
+        reasoning falls significantly below chance (z ≈ 4.6), and the drop from{' '}
+        {MONITOR_DEFAULT.auroc.toFixed(3)} is significant (z ≈ 5.1).
       </div>
     </div>
   );

@@ -15,7 +15,8 @@
     "scenario": "ts-node src/scripts/scenario-demo.ts",
     "smoke:live": "ts-node src/scripts/smoke-live.ts",
     "duel": "ts-node src/scripts/duel-live.ts",
-    "stats-check": "ts-node src/scripts/stats-check.ts"
+    "stats-check": "ts-node src/scripts/stats-check.ts",
+    "export-snapshot": "ts-node src/scripts/export-snapshot.ts"
   },
   "dependencies": {
     "@nestjs/common": "^11.1.27",
