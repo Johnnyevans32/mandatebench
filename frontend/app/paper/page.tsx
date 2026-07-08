@@ -42,11 +42,7 @@ export default function PaperPage() {
         Mandate Faithfulness and Pre-Signature Monitorability for Agentic-Payment LLMs
       </h1>
       <p className="soft" style={{ fontSize: 14, margin: 0 }}>
-        <a
-          href="https://scholar.google.com/citations?user=gvjnYJUAAAAJ"
-          target="_blank"
-          rel="noopener"
-        >
+        <a href="https://www.linkedin.com/in/0xjevan" target="_blank" rel="noopener">
           Evans Eburu
         </a>{' '}
         · 9 frontier models, one+ per major lab · 753 graded authorizations + a 9×9 adversarial matrix
