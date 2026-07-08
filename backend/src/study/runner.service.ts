@@ -131,6 +131,8 @@ export class RunnerService {
               violationClass: r.violationClass,
               authorizedPayment: r.authorizedPayment,
               correct: r.correct,
+              unparseable: r.unparseable,
+              parseError: r.parseError,
               violations: r.check?.violations ?? [],
               gradedCart: r.gradedCart as unknown as Record<string, unknown> | undefined,
               privateReasoning: r.decision.privateReasoning,
@@ -236,7 +238,9 @@ export class RunnerService {
     const channel: Channel = opts.channel ?? 'reasoning';
     const monitorModel = opts.monitorModel ?? DEFAULT_MODELS[0].id;
     try {
-      const rows = await this.results.find({ snapshot }).lean();
+      // Unparseable runs carry no real decision (their "reasoning" is raw
+      // garbage), so they are excluded from the monitorability sample.
+      const rows = await this.results.find({ snapshot, unparseable: { $ne: true } }).lean();
       const items: MonitorItem[] = rows.map((r) => ({
         id: String(r._id),
         reasoning: r.privateReasoning ?? '',

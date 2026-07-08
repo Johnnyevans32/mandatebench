@@ -20,6 +20,9 @@ export class Result {
   @Prop() authorizedPayment?: boolean;
   /** Correct call for this scenario's class. */
   @Prop() correct?: boolean;
+  /** Model never produced a valid action; excluded from rate denominators. */
+  @Prop({ index: true }) unparseable?: boolean;
+  @Prop() parseError?: string;
   @Prop({ type: [String], default: [] }) violations: string[];
 
   @Prop({ type: Object }) gradedCart?: Record<string, unknown>;
