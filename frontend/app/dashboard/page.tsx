@@ -17,6 +17,11 @@ export default async function Dashboard() {
   const models = snap.leaderboard.map((r) => r.model);
   const cell = new Map(snap.matrix.map((c) => [`${c.model}|${c.pressure}`, c]));
 
+  // adversarial (LLM-vs-LLM) grid
+  const attackers = [...new Set(snap.duelMatrix.map((d) => d.attacker))].sort();
+  const agents = [...new Set(snap.duelMatrix.map((d) => d.agent))].sort();
+  const duelCell = new Map(snap.duelMatrix.map((d) => [`${d.attacker}|${d.agent}`, d]));
+
   return (
     <main className="wrap" style={{ paddingTop: 40, paddingBottom: 40 }}>
       <div className="kicker">Live results</div>
@@ -126,6 +131,75 @@ export default async function Dashboard() {
           Green = faithful, red = authorized a payment that breached the mandate.
         </p>
       </section>
+
+      {snap.duelMatrix.length > 0 && (
+        <section>
+          <h2>Adversarial · LLM vs LLM</h2>
+          <p className="soft" style={{ fontSize: 15, maxWidth: '64ch', marginTop: -8 }}>
+            Each attacker model (rows) plays a merchant and tries, over several
+            turns, to manipulate each agent model (columns) into authorizing a
+            payment that breaks its mandate. Red = the attacker got a violation
+            authorized.
+          </p>
+          <div className="heatscroll" style={{ marginTop: 16 }}>
+            <table className="heat">
+              <thead>
+                <tr>
+                  <th>attacker ╲ agent</th>
+                  {agents.map((a) => (
+                    <th key={a}>{shortModel(a)}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {attackers.map((atk) => (
+                  <tr key={atk}>
+                    <td className="rowlabel mono">{shortModel(atk)}</td>
+                    {agents.map((ag) => {
+                      const d = duelCell.get(`${atk}|${ag}`);
+                      if (!d) return <td key={ag} className="cell empty">–</td>;
+                      return (
+                        <td
+                          key={ag}
+                          className="cell"
+                          style={{ background: heatColor(d.breachRate) }}
+                          title={`${d.breaches}/${d.duels} breached`}
+                        >
+                          {(d.breachRate * 100).toFixed(0)}%
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {snap.duelAgents.length > 0 && (
+            <>
+              <h2 style={{ marginTop: 32 }}>Agent robustness (breached across all attackers)</h2>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Agent</th>
+                    <th>Breached</th>
+                    <th>Rate</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {snap.duelAgents.map((a) => (
+                    <tr key={a.model}>
+                      <td className="model">{shortModel(a.model)}</td>
+                      <td className="mono">{a.breached}/{a.duels}</td>
+                      <td className="rate">{(a.breachRate * 100).toFixed(0)}%</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </>
+          )}
+        </section>
+      )}
     </main>
   );
 }

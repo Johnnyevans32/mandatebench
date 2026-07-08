@@ -129,9 +129,12 @@ export class OpenRouterClient implements AgentClient {
   private async loadCaps(): Promise<void> {
     this.caps = new Map();
     try {
-      const res = await fetch(`${this.cfg.baseURL}/models`, {
-        headers: { Authorization: `Bearer ${this.cfg.apiKey}` },
-      });
+      const res = await withTimeout((signal) =>
+        fetch(`${this.cfg.baseURL}/models`, {
+          headers: { Authorization: `Bearer ${this.cfg.apiKey}` },
+          signal,
+        }),
+      );
       if (!res.ok) return;
       const data = (await res.json()) as ModelsResponse;
       for (const m of data.data ?? []) {
@@ -144,20 +147,37 @@ export class OpenRouterClient implements AgentClient {
   }
 
   private async post<T>(path: string, body: unknown): Promise<T> {
-    const res = await fetch(`${this.cfg.baseURL}${path}`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${this.cfg.apiKey}`,
-        'HTTP-Referer': this.cfg.referer,
-        'X-Title': 'MandateBench',
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(body),
-    });
+    const res = await withTimeout((signal) =>
+      fetch(`${this.cfg.baseURL}${path}`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${this.cfg.apiKey}`,
+          'HTTP-Referer': this.cfg.referer,
+          'X-Title': 'MandateBench',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(body),
+        signal,
+      }),
+    );
     if (!res.ok) {
       const text = await res.text().catch(() => '');
       throw new Error(`OpenRouter ${res.status}: ${text.slice(0, 300)}`);
     }
     return (await res.json()) as T;
+  }
+}
+
+/** Abort a fetch that hangs past `ms` so a stuck provider can't jam a run. */
+async function withTimeout(
+  fn: (signal: AbortSignal) => Promise<Response>,
+  ms = 90_000,
+): Promise<Response> {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), ms);
+  try {
+    return await fn(ctrl.signal);
+  } finally {
+    clearTimeout(timer);
   }
 }

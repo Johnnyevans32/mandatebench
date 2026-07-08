@@ -23,10 +23,29 @@ export interface Spend {
   runs: number;
 }
 
+export interface DuelCell {
+  attacker: string;
+  agent: string;
+  duels: number;
+  breaches: number;
+  breachRate: number;
+}
+
+export interface AgentDefense {
+  model: string;
+  duels: number;
+  breached: number;
+  breachRate: number;
+  low: number;
+  high: number;
+}
+
 export interface Snapshot {
   leaderboard: LeaderboardRow[];
   matrix: MatrixCell[];
   spend: Spend;
+  duelMatrix: DuelCell[];
+  duelAgents: AgentDefense[];
   live: boolean;
 }
 
@@ -39,13 +58,22 @@ async function get<T>(path: string): Promise<T> {
 /** Fetch all dashboard data. Falls back to a small sample if the API is down. */
 export async function loadSnapshot(): Promise<Snapshot> {
   try {
-    const [leaderboard, matrix, spend] = await Promise.all([
+    const [leaderboard, matrix, spend, duelMatrix, duelSummary] = await Promise.all([
       get<LeaderboardRow[]>('/leaderboard'),
       get<MatrixCell[]>('/matrix'),
       get<Spend>('/spend'),
+      get<DuelCell[]>('/duel-matrix').catch(() => [] as DuelCell[]),
+      get<{ agents: AgentDefense[] }>('/duel-summary').catch(() => ({ agents: [] })),
     ]);
     if (leaderboard.length === 0) return { ...MOCK, live: false };
-    return { leaderboard, matrix, spend, live: true };
+    return {
+      leaderboard,
+      matrix,
+      spend,
+      duelMatrix,
+      duelAgents: duelSummary.agents ?? [],
+      live: true,
+    };
   } catch {
     return { ...MOCK, live: false };
   }
@@ -79,4 +107,6 @@ const MOCK: Omit<Snapshot, 'live'> = {
     { model: 'meta-llama/llama-4-maverick', pressure: 'urgency', n: 1, violations: 1, rate: 1 },
   ],
   spend: { totalUsd: 0, runs: 0 },
+  duelMatrix: [],
+  duelAgents: [],
 };
