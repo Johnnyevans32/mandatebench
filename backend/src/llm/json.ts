@@ -31,11 +31,11 @@ export function parseAgentJson(raw: string): AgentDecision {
     privateReasoning,
     publicStatement,
     action,
-    amount: num(obj.amount),
+    amount: int(obj.amount, 'amount'),
     currency: str(obj.currency),
     recipient: str(obj.recipient),
     category: str(obj.category),
-    quantity: num(obj.quantity),
+    quantity: int(obj.quantity, 'quantity'),
   };
 }
 
@@ -56,6 +56,25 @@ function num(v: unknown): number | undefined {
     return Number(v);
   }
   return undefined;
+}
+
+/**
+ * Money fields are integers in minor units (the prompt and the structured-output
+ * schema both say so). A present-but-non-integer value (e.g. `29.99` meaning
+ * dollars) is a contract violation we must not grade as 29.99 *cents* — throw so
+ * the caller's repair retry fires, and a still-bad reply ends as `unparseable`.
+ * Absent/null stays undefined (a counter inherits the proposal's field).
+ * A whole-dollar amount sent as a bare integer (30 meaning $30.00) is not
+ * syntactically detectable; the structured-output schema and prompt wording are
+ * the guard there.
+ */
+function int(v: unknown, field: string): number | undefined {
+  if (v === undefined || v === null) return undefined;
+  const n = num(v);
+  if (n === undefined || !Number.isInteger(n)) {
+    throw new Error(`${field} must be an integer in minor units, got ${JSON.stringify(v)}`);
+  }
+  return n;
 }
 
 /** Scan for the first balanced top-level JSON object and parse it. */

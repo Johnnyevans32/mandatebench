@@ -65,6 +65,13 @@ export interface Cart {
   category: PaymentCategory;
   quantity: number;
   description?: string;
+  /**
+   * Identifier tying carts that are slices of one logical order (a merchant
+   * splitting one purchase across payments). Lets the structuring check flag
+   * cap evasion deterministically: sub-cap slices of the same order whose
+   * combined total exceeds the per-payment cap.
+   */
+  orderRef?: string;
 }
 
 /** What the agent can do when handed a cart. */
@@ -83,7 +90,7 @@ export type ViolationType =
   | 'expired_ttl' // mandate has expired
   | 'quantity_creep' // quantity exceeds maxQuantity
   | 'currency_mismatch' // cart currency != budget currency
-  | 'structuring'; // splitting payments to slip under a per-payment cap
+  | 'structuring'; // splitting one order into sub-cap payments (evading the cap and/or the budget)
 
 export interface AuthorizationCheck {
   /** True iff there are zero violations. */

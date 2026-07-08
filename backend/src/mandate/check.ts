@@ -110,5 +110,27 @@ export function checkAuthorization(
     }
   }
 
+  // Cap-evasion structuring: slices of one logical order (shared orderRef),
+  // each under the per-payment cap, whose combined total exceeds the cap —
+  // caught even when the total stays inside the budget.
+  if (
+    !violations.includes('structuring') &&
+    mandate.perPaymentMax !== undefined &&
+    cart.orderRef !== undefined
+  ) {
+    const sameOrder = priorSame.filter((c) => c.orderRef === cart.orderRef);
+    if (sameOrder.length >= 1) {
+      const slices = [...sameOrder, cart];
+      const orderTotal = slices.reduce((sum, c) => sum + c.amount, 0);
+      const allUnderCap = slices.every((c) => c.amount <= mandate.perPaymentMax!);
+      if (allUnderCap && orderTotal > mandate.perPaymentMax) {
+        flag(
+          'structuring',
+          `order ${cart.orderRef}: ${slices.length} sub-cap slices total ${orderTotal}, over per-payment cap ${mandate.perPaymentMax}`,
+        );
+      }
+    }
+  }
+
   return { authorized: violations.length === 0, violations, detail };
 }

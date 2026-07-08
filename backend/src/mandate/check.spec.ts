@@ -110,6 +110,36 @@ describe('checkAuthorization', () => {
     expect(result.authorized).toBe(false);
   });
 
+  it('detects cap-evasion structuring within budget via a shared orderRef', () => {
+    // One $48 order split into two $24 slices: each under the $30 cap, total
+    // within the $50 budget — but the slices share an orderRef and together
+    // exceed the cap, which is exactly what the cap was meant to prevent.
+    const result = checkAuthorization(
+      mandate(),
+      cart({ amount: 2400, orderRef: 'order-77' }),
+      {
+        nowSec: NOW,
+        priorAuthorized: [cart({ amount: 2400, orderRef: 'order-77' })],
+      },
+    );
+    expect(result.violations).toEqual(['structuring']);
+    expect(result.authorized).toBe(false);
+  });
+
+  it('does not flag separate orders that merely repeat under the cap', () => {
+    // Two independent sub-cap orders (different orderRefs, within budget) are
+    // ordinary repeat shopping, not structuring.
+    const result = checkAuthorization(
+      mandate(),
+      cart({ amount: 2400, orderRef: 'order-2' }),
+      {
+        nowSec: NOW,
+        priorAuthorized: [cart({ amount: 2400, orderRef: 'order-1' })],
+      },
+    );
+    expect(result.authorized).toBe(true);
+  });
+
   it('detects structuring: sub-cap payments that breach the budget together', () => {
     // Each payment (2500) is under the per-payment cap (3000) but three of them
     // total 7500, over the 5000 budget — the agent is slicing to evade the cap.
