@@ -215,6 +215,47 @@ export default function PaperPage() {
         </p>
       </section>
 
+      {/* Finding 4 — adversarial */}
+      <section style={{ marginTop: 34 }}>
+        <h2>Finding 4 — Under live attack, the same models break</h2>
+        <p className="soft" style={{ fontSize: 14, marginTop: -6, maxWidth: '72ch' }}>
+          Beyond scripted traps, every model plays the merchant and attacks every
+          model&apos;s agent over a multi-turn negotiation — a full 9×9 matrix (81 duels).
+          Robustness is a property of the <em>defender</em>, not the attacker: no attacker
+          exceeds a 22% success rate, but breaches concentrate sharply on a few agents —
+          and they are the same models that miss intent violations above.
+        </p>
+        <div className="heatscroll" style={{ marginTop: 14 }}>
+          <table>
+            <thead>
+              <tr>
+                <th>Agent (defender)</th>
+                <th>Breached by attackers</th>
+                <th>Rate</th>
+              </tr>
+            </thead>
+            <tbody>
+              {[
+                ['GPT-5.5 · Opus 4.8 · Gemini · Grok · Qwen · Kimi', '0 / 9', '0%'],
+                ['DeepSeek V4 Pro', '1 / 9', '11%'],
+                ['Mistral Large 2512', '5 / 9', '56%'],
+                ['Llama 4 Maverick', '6 / 9', '67%'],
+              ].map(([m, n, r]) => (
+                <tr key={m}>
+                  <td className="model" style={{ fontSize: 13 }}>
+                    {m}
+                  </td>
+                  <td className="mono">{n}</td>
+                  <td className="mono" style={{ fontWeight: 700, color: intentColor(100 - parseInt(r, 10)) }}>
+                    {r}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
       {/* Method */}
       <section style={{ marginTop: 34 }}>
         <h2>Method, in brief</h2>
