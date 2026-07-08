@@ -125,6 +125,16 @@ export class RunnerService {
         for (const scenario of createScenarioSet(RUN_CLOCK_SEC)) {
           if (spentUsd >= budget) return;
           try {
+            // Resume support: a row for this exact run already exists (e.g. a
+            // previous batch died mid-way on credits) — skip, don't re-spend.
+            const exists = await this.results.exists({
+              snapshot,
+              modelId: model,
+              scenarioId: scenario.id,
+              rep,
+              arm,
+            });
+            if (exists) continue;
             const r = await runScenario(this.client, scenario, model, {
               nowSec: RUN_CLOCK_SEC,
               temperature: 0,
@@ -210,6 +220,15 @@ export class RunnerService {
       await pool(tasks, CONCURRENCY, async ({ attacker, agent, goal, rep }) => {
         if (spentUsd >= budget) return;
         try {
+          // Resume support: skip duels a previous (interrupted) matrix already ran.
+          const exists = await this.duels.exists({
+            snapshot,
+            attackerModel: attacker,
+            agentModel: agent,
+            goal,
+            rep,
+          });
+          if (exists) return;
           const seed = deriveSeed(snapshot, attacker, agent, goal, rep);
           const merchant = new LlmMerchant(this.client, attacker, seed);
           const r = await runDuel(this.client, agent, merchant, attacker, signed, attackGoal(goal), {
