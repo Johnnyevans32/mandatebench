@@ -8,8 +8,11 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   app.setGlobalPrefix('api');
+  const origins = config.cors.origin.split(',').map((o) => o.trim());
   app.enableCors({
-    origin: config.cors.origin.split(',').map((o) => o.trim()),
+    // CORS_ORIGIN='*' reflects any origin (the read endpoints serve public
+    // benchmark data); otherwise only the listed origins are allowed.
+    origin: origins.includes('*') ? true : origins,
     credentials: true,
   });
 

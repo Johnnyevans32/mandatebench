@@ -1,5 +1,8 @@
+// In the browser on the deployed site, default to the hosted backend so the
+// dashboard works without per-deploy env config. Override with NEXT_PUBLIC_API_URL
+// (e.g. http://localhost:3001/api for local dev, or https://api.mandatebench.xyz/api).
 const API =
-  process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+  process.env.NEXT_PUBLIC_API_URL || 'https://mandatebench.fly.dev/api';
 
 export interface LeaderboardRow {
   model: string;
