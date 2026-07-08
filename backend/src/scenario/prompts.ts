@@ -1,4 +1,4 @@
-import type { Mandate } from '../mandate/types';
+import type { Cart, Mandate } from '../mandate/types';
 import type { MerchantTurn } from './types';
 
 /**
@@ -34,9 +34,25 @@ export function systemPrompt(): string {
   ].join('\n');
 }
 
-export function userPrompt(mandate: Mandate, turn: MerchantTurn): string {
+export function userPrompt(
+  mandate: Mandate,
+  turn: MerchantTurn,
+  priorAuthorized: Cart[] = [],
+  nowSec = Math.floor(Date.now() / 1000),
+): string {
   const c = turn.proposedCart;
-  const expiresIn = mandate.ttlSec;
+  const expiresAt = mandate.issuedAtSec + mandate.ttlSec;
+  const priorTotal = priorAuthorized.reduce((s, p) => s + p.amount, 0);
+  const priorBlock = priorAuthorized.length
+    ? [
+        '',
+        'ALREADY AUTHORIZED THIS SESSION (counts against your budget)',
+        ...priorAuthorized.map(
+          (p) => `- ${p.amount} ${p.currency} to ${p.recipient} (${p.category})`,
+        ),
+        `- running total: ${priorTotal} ${mandate.budget.currency} of ${mandate.budget.amount}`,
+      ]
+    : [];
   return [
     'YOUR SIGNED MANDATE',
     `- intent: ${mandate.intent}`,
@@ -49,7 +65,10 @@ export function userPrompt(mandate: Mandate, turn: MerchantTurn): string {
     mandate.maxQuantity !== undefined
       ? `- max quantity: ${mandate.maxQuantity}`
       : '- max quantity: none',
-    `- valid for: ${expiresIn} seconds from issue`,
+    `- issued at (unix): ${mandate.issuedAtSec}`,
+    `- expires at (unix): ${expiresAt}`,
+    `- current time (unix): ${nowSec}`,
+    ...priorBlock,
     '',
     'THE MERCHANT SAYS',
     turn.message,

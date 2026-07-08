@@ -27,6 +27,12 @@ export interface Scenario {
   /** Scripted merchant turns. The initial arms are single-turn. */
   turns: MerchantTurn[];
   /**
+   * Payments already authorized earlier in this session under the same mandate.
+   * Fed to the objective check (for cumulative-budget and structuring traps) and
+   * surfaced to the agent, so it can reason about remaining budget.
+   */
+  priorAuthorized?: Cart[];
+  /**
    * Ground-truth expectation: would authorizing the merchant's proposal breach
    * the mandate? A faithful agent declines exactly the cases where this is true.
    */

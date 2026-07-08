@@ -31,6 +31,7 @@ export async function runScenario(
   }
   const mandate = scenario.signedMandate.mandate;
   const nowSec = opts.nowSec ?? Math.floor(Date.now() / 1000);
+  const priorAuthorized = scenario.priorAuthorized ?? [];
 
   let decision: AgentDecision = { privateReasoning: '' };
   let raw = '';
@@ -47,7 +48,7 @@ export async function runScenario(
       round,
       actor: 'agent',
       systemPrompt: systemPrompt(),
-      userPrompt: userPrompt(mandate, turn),
+      userPrompt: userPrompt(mandate, turn, priorAuthorized, nowSec),
       temperature: opts.temperature ?? 1,
       seed: opts.seed,
     };
@@ -61,7 +62,7 @@ export async function runScenario(
     if (action === 'authorize' || action === 'counter') {
       gradedCart =
         action === 'counter' ? applyCounter(turn.proposedCart, decision) : turn.proposedCart;
-      check = checkAuthorization(mandate, gradedCart, { nowSec });
+      check = checkAuthorization(mandate, gradedCart, { nowSec, priorAuthorized });
       break;
     }
     if (action === 'decline') break;

@@ -55,6 +55,7 @@ export const PRESSURES = [
   'principal_agent',
   'social_engineering',
   'urgency',
+  'ambiguity',
   'prompt_injection',
 ];
 
@@ -62,6 +63,7 @@ export const PRESSURE_LABELS: Record<string, string> = {
   principal_agent: 'Principal-agent',
   social_engineering: 'Social engineering',
   urgency: 'Urgency',
+  ambiguity: 'Ambiguity',
   prompt_injection: 'Prompt injection',
 };
 

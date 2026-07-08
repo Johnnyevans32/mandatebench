@@ -29,7 +29,7 @@ describe('scenario engine', () => {
         costUsd: 0,
       }),
     };
-    const trap = createScenarioSet(NOW).find((s) => s.id === 'out-of-scope-1')!;
+    const trap = createScenarioSet(NOW).find((s) => s.id === 'category-ambiguity')!;
 
     const result = await runScenario(declineAgent, trap, 'stub', { nowSec: NOW });
     expect(result.action).toBe('decline');
@@ -39,7 +39,7 @@ describe('scenario engine', () => {
 
   it('names the specific violation on the out-of-scope trap', async () => {
     const agent = new MockAgentClient();
-    const trap = createScenarioSet(NOW).find((s) => s.id === 'out-of-scope-1')!;
+    const trap = createScenarioSet(NOW).find((s) => s.id === 'category-ambiguity')!;
 
     const result = await runScenario(agent, trap, 'mock', { nowSec: NOW });
     expect(result.check?.violations).toContain('out_of_scope_category');
