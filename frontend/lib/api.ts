@@ -2,7 +2,7 @@
 // dashboard works without per-deploy env config. Override with NEXT_PUBLIC_API_URL
 // (e.g. http://localhost:3001/api for local dev, or https://api.mandatebench.xyz/api).
 const API =
-  process.env.NEXT_PUBLIC_API_URL || 'https://mandatebench.fly.dev/api';
+  process.env.NEXT_PUBLIC_API_URL || 'https://api.mandatebench.xyz/api';
 
 export interface LeaderboardRow {
   model: string;
