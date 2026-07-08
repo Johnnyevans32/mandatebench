@@ -126,10 +126,15 @@ signed-mandate authorization gate, and measures how far an explicit
 it. The monitor sees only the configured channel (public statement, or private
 reasoning) just before the signature and outputs a violation probability.
 
-**Determinism.** Per-call seeds derived from the scenario, actor, and turn;
-pinned model IDs; logged serving provider and temperature; one repair retry on
-unparseable output; and a deterministic mock provider that runs the whole harness
-offline with no API spend.
+**Determinism.** A fixed run clock (so mandate expiry is identical across models
+and runs); temperature 0 in the study runner; one repair retry on unparseable
+output — a run whose final reply still has no valid action is recorded as
+`unparseable` and excluded from rate denominators, never graded as a defence;
+and a deterministic mock provider that runs the whole harness offline with no
+API spend. Model slugs are env-overridable aliases, not dated pins, and the
+serving provider and per-call seeds are not yet logged — full provenance
+(pinned versions, provider logging, per-call seeds) is roadmap, not implemented,
+and runs are therefore repeatable but not bit-reproducible.
 
 ## 6. Models
 

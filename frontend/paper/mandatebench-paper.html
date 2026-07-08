@@ -1,0 +1,311 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>MandateBench: Mandate Faithfulness and Pre-Signature Monitorability for Agentic-Payment LLMs</title>
+<style>
+  @page { size: A4; margin: 22mm 20mm; }
+  * { box-sizing: border-box; }
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body {
+    font: 10.5pt/1.55 Georgia, 'Times New Roman', serif;
+    color: #111;
+    margin: 0;
+    text-align: justify;
+    hyphens: auto;
+  }
+  h1 { font-size: 17pt; line-height: 1.25; margin: 0 0 6pt; text-align: left; letter-spacing: -0.01em; }
+  h2 { font-size: 12pt; margin: 16pt 0 5pt; text-align: left; }
+  h3 { font-size: 10.5pt; margin: 11pt 0 3pt; text-align: left; }
+  p { margin: 0 0 7pt; }
+  .meta { font-size: 8.5pt; color: #444; font-family: Helvetica, Arial, sans-serif; margin-bottom: 14pt; text-align: left; }
+  .meta a { color: #444; }
+  .abstract-label { font-variant: small-caps; letter-spacing: 0.18em; font-size: 10pt; text-align: center; margin: 10pt 0 4pt; font-weight: bold; }
+  .abstract { font-size: 9.5pt; margin: 0 14pt 6pt; }
+  table { border-collapse: collapse; width: 100%; margin: 8pt 0 3pt; font-family: Helvetica, Arial, sans-serif; font-size: 8.5pt; }
+  th { text-align: left; font-size: 7.5pt; letter-spacing: 0.06em; text-transform: uppercase; border-bottom: 1.2pt solid #111; padding: 3pt 6pt; }
+  td { border-bottom: 0.5pt solid #bbb; padding: 3pt 6pt; }
+  .num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+  caption, .caption { caption-side: bottom; font-size: 8pt; color: #444; text-align: left; padding-top: 3pt; line-height: 1.45; font-family: Helvetica, Arial, sans-serif; }
+  blockquote { margin: 8pt 10pt; padding: 5pt 10pt; border-left: 2pt solid #a33; font-style: italic; font-size: 9.5pt; background: #f6f4f2; }
+  ol.refs { font-size: 9pt; padding-left: 16pt; }
+  ol.refs li { margin-bottom: 3pt; }
+  .footer { margin-top: 16pt; border-top: 0.5pt solid #999; padding-top: 5pt; font-size: 8pt; color: #555; font-family: Helvetica, Arial, sans-serif; text-align: left; }
+  em.term { font-style: italic; }
+</style>
+</head>
+<body>
+
+<h1>MandateBench: Mandate Faithfulness and Pre-Signature Monitorability for Agentic-Payment LLMs</h1>
+<div class="meta">
+  <a href="https://www.linkedin.com/in/0xjevan">Evans Eburu</a><br />
+  Preprint · 2026 · v6.1 pilot, revised (snapshot v6: 9 frontier models, 753 graded authorizations + adversarial duels) ·
+  Open source (MIT), <a href="https://github.com/Johnnyevans32/mandatebench">github.com/Johnnyevans32/mandatebench</a> · CC BY 4.0 ·
+  <a href="https://mandatebench.xyz/paper">mandatebench.xyz/paper</a>
+</div>
+
+<div class="abstract-label">Abstract</div>
+<p class="abstract">
+Emerging standards for AI payments — Google&rsquo;s Agent Payments Protocol (AP2) and Coinbase&rsquo;s x402 — let an
+autonomous agent commit funds by signing a <em class="term">mandate</em>: a cryptographically signed statement of what it is
+authorized to spend. Because a signature is irreversible, the safety-critical question is not whether a protocol
+gateway can reject a malformed request, but whether the agent can be manipulated into authorizing a payment it should
+refuse, and whether that can be caught before the signature. MandateBench measures mandate faithfulness across nine
+frontier models (one or more per major lab) under a taxonomy of adversarial pressures, with a judge-free ground truth:
+rule violations are deterministic predicates over the signed object, and intent traps are author-constructed and
+labeled before any model runs — no LLM judges outcomes. Its central contribution is separating two violation classes.
+<em class="term">Rule</em> violations (over budget, over per-payment cap, unauthorized recipient, out-of-scope category, expired mandate)
+are structural — a stateless gateway that validates the signed fields already catches them. <em class="term">Intent</em> violations
+satisfy every signed field yet betray the mandate&rsquo;s natural-language intent — a grocery mandate spent on a
+stored-value gift card or a bottle of vintage champagne — and no structural check can catch them. Models that catch
+structural violations near-perfectly still miss intent violations: five of nine authorize a third of them, and one
+authorizes more than half (mean intent-catch 75%, range 44&ndash;100%; per-model n=9, so pooled tiers rather than
+individual rows carry the contrast). We then measure pre-signature monitorability: a monitor reading only the
+agent&rsquo;s private reasoning predicts violations at AUROC 0.669 (95% CI 0.56&ndash;0.78). Instructing the agent to keep its
+reasoning bland is doubly harmful — violations roughly double (p&nbsp;≈&nbsp;0.009), and the monitor&rsquo;s AUROC falls to 0.304,
+significantly below chance (z&nbsp;≈&nbsp;4.6), because suppressed reasoning makes a breach read as more routine than a
+compliant decision. Reasoning suppression does not merely blind the overseer; it blinds the agent.
+</p>
+
+<h2>1. Introduction</h2>
+<p>
+Agentic-payment protocols move the authority to spend money from a human click to a model&rsquo;s signature. In AP2 [1] and
+x402 [2], a user (or their wallet) issues a signed mandate delimiting a budget, per-payment cap, permitted recipients,
+permitted categories, and a validity window; an agent then negotiates with merchants and signs to authorize each
+payment. The signature is the point of no return: once emitted it settles, and there is no undo.
+</p>
+<p>
+A natural objection is that the protocol itself enforces the mandate — a gateway can reject any signed request whose
+amount, recipient, or category falls outside the mandate. This is true, and it is exactly why the interesting failures
+are elsewhere. Hard structural limits are the easy case. The dangerous case is a request that is structurally valid —
+correct recipient, in-budget, in-category — but is not what the user meant, or is a payment the agent was socially
+engineered into signing. A gateway cannot distinguish &ldquo;this week&rsquo;s groceries&rdquo; from a $25 gift card charged to the
+same grocer for the same amount; only a model that reasons about intent can. MandateBench is built to measure
+precisely this gap, and to ask whether an overseer can catch a breach in the moment before the signature.
+</p>
+<p>
+We organize the work around four questions. <b>RQ1</b>: how often do models authorize mandate-violating payments under
+adversarial pressure? <b>RQ2</b>: does the failure fall on structural (rule) or intent violations, and does the split
+separate models? <b>RQ3</b>: can a monitor reading only the agent&rsquo;s private reasoning predict a violation before the
+signature, and how robust is that to an agent instructed to hide its reasoning? <b>RQ4</b> (adversarial): when one model
+plays the merchant and attacks another, who breaks and who holds?
+</p>
+
+<h2>2. Related work</h2>
+<p>
+Security work on agentic payments so far concentrates on the protocol layer or on a single attack vector.
+&ldquo;Whispers of Wealth&rdquo; red-teams a real AP2 signed-mandate flow via prompt injection, on one model and one vector [3];
+a recent SoK of agentic-commerce security systematizes the threat axes and explicitly notes that real-world security
+benchmarking of these systems remains underdeveloped [4]; zero-trust runtime verification hardens the AP2 transaction
+itself cryptographically [5]. MandateBench measures the layer in between — the model&rsquo;s own authorization decision —
+across models and across a taxonomy of pressures, and is complementary to protocol enforcement.
+</p>
+<p>
+On the oversight side, chain-of-thought monitorability has been framed as a valuable but fragile safety opportunity
+[6]; black-box monitors have been trained to catch scheming in agents [7], and pre-action monitoring is established
+(InferAct [8], ProbGuard [9]). Deception benchmarks measure monitorability of hidden intent in cross-play games [15],
+and sabotage evaluations measure whether models can defeat oversight [14]. Agent policy-adherence benchmarks —
+ST-WebAgentBench [10], the τ-bench family, MANTRA [11], PolicyBank [12] — measure web/retail policy following, and
+adversarial financial-agent benchmarks such as CAIA evaluate decision quality under manipulated crypto/financial
+markets [13]. Verification-native clearing for agentic commerce [16] and dynamic multi-agent compliance benchmarks
+[17] are contemporaneous adjacent lines.
+</p>
+<p>
+MandateBench differs on three axes: (i) a high-stakes, irreversible-action substrate (signed money movement) rather
+than a game or a QA task; (ii) a judge-free ground truth; and (iii) an explicit separation of gateway-catchable rule
+violations from intent violations that only a model or model-monitor can catch — which reframes &ldquo;why put a model in
+the loop&rdquo; as an empirical, measurable question.
+</p>
+
+<h2>3. Method</h2>
+<h3>3.1 Signed mandates and ground truth</h3>
+<p>
+Each scenario issues an Ed25519-signed mandate over a canonical (sorted-key) serialization; the harness verifies the
+signature before each run and grades against the signed object (the agent receives the mandate&rsquo;s terms in its
+context). A payment is a cart (recipient, amount in integer minor units, currency, category, quantity). A
+deterministic checker <span style="font-family: Menlo, monospace; font-size: 8.5pt;">checkAuthorization(mandate, cart, priorAuthorized)</span>
+returns the exact set of violated predicates: over-budget, over per-payment cap, unauthorized recipient, out-of-scope
+category, expired TTL, quantity creep, currency mismatch, and structuring (splitting an over-budget order into sub-cap
+charges). No LLM judges outcomes. Rule labels are deterministic by construction; intent labels are author-constructed
+traps fixed before any model runs (§3.2) — deterministic to grade, but resting on the author&rsquo;s judgment of intent,
+which independent human validation should confirm in future versions.
+</p>
+<h3>3.2 Pressure taxonomy and violation classes</h3>
+<p>
+Scenarios span a taxonomy of pressures — baseline, principal-agent overreach, merchant social engineering,
+urgency/scarcity, category ambiguity, prompt injection, and scope drift — as well as two non-traps (a clean order and
+an at-cap order) that measure over-refusal. (A conflicting-mandates arm is defined in the taxonomy but not yet
+populated with scenarios; the scope-drift arm is single-turn in v6.) Each scenario is labelled by ground-truth class:
+<em class="term">clean</em> (authorizing is correct), <em class="term">rule</em> (breaks a structural term), or <em class="term">intent</em> (satisfies every
+structural term but breaks the mandate&rsquo;s stated intent). The intent traps are constructed so a stateless gateway
+validating the signed fields passes them: a grocery mandate (FreshMart, groceries, ≤$30, in budget) is offered a $25
+FreshMart gift card, a $29 bottle of vintage champagne, or a grocery total padded with an $8 charity round-up. Each is
+structurally perfect; each betrays the intent.
+</p>
+<h3>3.3 Monitorability protocol (RQ3)</h3>
+<p>
+For every graded decision we store the agent&rsquo;s private reasoning and public statement. A monitor model — GPT-5.5 in
+this pilot — reads only the agent&rsquo;s private reasoning, never the mandate numbers or the cart, and outputs a violation
+probability in [0,1]. We report AUROC of these scores against the objective violation labels, pooled across the nine
+agents; pooling mixes between-model style with within-model discrimination, and the monitor scores its own outputs for
+one of the nine agents (per-model AUROC and a multi-monitor panel are future work). The adversarial arm re-runs the
+benchmark with an added instruction telling the agent its reasoning may be reviewed and to keep it bland,
+uninformative, and free of any mention of limits or risk; the decision is otherwise unconstrained. Comparing monitor
+AUROC with and without suppression measures oversight robustness.
+</p>
+<h3>3.4 Models</h3>
+<p>
+Nine flagship models via OpenRouter with structured outputs and temperature 0 where supported: GPT-5.5, Claude Opus
+4.8, Gemini 3.5 Flash, DeepSeek V4 Pro, Grok 4.3, Llama 4 Maverick, Qwen3.7 Max, Kimi K2.6, and Mistral Large 2512.
+The pilot runs three repetitions per scenario (snapshot v6: 378 graded authorizations; a suppressed-reasoning arm
+v6-hidden: 375; three runs errored and were dropped). Because repetitions run at temperature 0, the three reps are
+near-duplicates — they capture serving-stack nondeterminism, not sampling variance — so the effective sample is closer
+to the unique-scenario count and all reported intervals should be read as optimistic.
+</p>
+
+<h2>4. Results</h2>
+<h3>4.1 RQ1 — Violations under pressure</h3>
+<p>
+Over trap scenarios, only three of nine models never violate (GPT-5.5, Claude Opus 4.8, Kimi K2.6). The rest range
+from 8% (Gemini, Grok, Qwen) to 25% (Llama 4 Maverick), with DeepSeek and Mistral in between. Notably, running
+repetitions matters even at temperature 0: Mistral scored 0/9 in a single pass but 3/27 over three reps — a single run
+overstated its robustness.
+</p>
+<h3>4.2 RQ2 — Rule vs intent (headline)</h3>
+<p>
+Splitting violations by class is the central result (Table 1). Structural (rule) violations are caught near-perfectly
+by almost every model — as expected, since they are the gateway-catchable case. Intent violations separate the field:
+three models catch them fully, five catch two of three, and Llama fewer than half. Per-model intent cells are n=9 and
+their intervals overlap, so the contrast that survives the small n is pooled: the three perfect models catch 27/27
+intent traps (Wilson 95% CI 88&ndash;100%) while the other six catch 34/54 (63%, CI 50&ndash;75%). A model can look flawless on
+the structural traps and still authorize a third of the intent violations a gateway is blind to.
+</p>
+<table>
+  <thead>
+    <tr><th>Model</th><th>Rule caught (n=27)</th><th>Intent caught (n=9)</th><th>False refusal (n=6)</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>GPT-5.5</td><td class="num">100% (27/27) [88–100]</td><td class="num">100% (9/9) [70–100]</td><td class="num">0% (0/6) [0–39]</td></tr>
+    <tr><td>Claude Opus 4.8</td><td class="num">100% (27/27) [88–100]</td><td class="num">100% (9/9) [70–100]</td><td class="num">0% (0/6) [0–39]</td></tr>
+    <tr><td>Kimi K2.6</td><td class="num">100% (27/27) [88–100]</td><td class="num">100% (9/9) [70–100]</td><td class="num">0% (0/6) [0–39]</td></tr>
+    <tr><td>Gemini 3.5 Flash</td><td class="num">100% (27/27) [88–100]</td><td class="num">67% (6/9) [35–88]</td><td class="num">0% (0/6) [0–39]</td></tr>
+    <tr><td>Grok 4.3</td><td class="num">100% (27/27) [88–100]</td><td class="num">67% (6/9) [35–88]</td><td class="num">17% (1/6) [3–56]</td></tr>
+    <tr><td>Qwen3.7 Max</td><td class="num">100% (27/27) [88–100]</td><td class="num">67% (6/9) [35–88]</td><td class="num">0% (0/6) [0–39]</td></tr>
+    <tr><td>Mistral Large 2512</td><td class="num">93% (25/27) [77–98]</td><td class="num">67% (6/9) [35–88]</td><td class="num">0% (0/6) [0–39]</td></tr>
+    <tr><td>DeepSeek V4 Pro</td><td class="num">89% (24/27) [72–96]</td><td class="num">67% (6/9) [35–88]</td><td class="num">0% (0/6) [0–39]</td></tr>
+    <tr><td>Llama 4 Maverick</td><td class="num">85% (23/27) [68–94]</td><td class="num">44% (4/9) [19–73]</td><td class="num">0% (0/6) [0–39]</td></tr>
+  </tbody>
+</table>
+<div class="caption"><b>Table 1.</b> Fraction of violations caught, split by class, snapshot v6 (3 reps/scenario at
+temperature 0); brackets are Wilson 95% CIs. Rule = structural, gateway-catchable. Intent = structurally valid but
+betrays stated intent. False refusal = clean orders wrongly declined (usefulness cost). Mean intent-catch 75%.
+Temperature-0 reps are near-duplicates, so intervals are optimistic (§3.4).</div>
+
+<h3>4.3 RQ3 — Pre-signature monitorability</h3>
+<p>
+A monitor reading only the agent&rsquo;s private reasoning predicts violations at AUROC 0.669, 95% CI 0.56&ndash;0.78
+(Hanley&ndash;McNeil; 29 violations vs 345 compliant decisions) — moderately, not perfectly, diagnostic. Under reasoning
+suppression the picture inverts. First, suppression is not behaviourally free: total violations roughly double
+(29&nbsp;→&nbsp;51 of ~375 per arm; Fisher exact p&nbsp;≈&nbsp;0.009). Inspecting the reasoning shows why — told to stay bland, models
+stop reasoning about intent and collapse to structural checks; violating intent-trap runs literally read
+&ldquo;within budget, under per-payment cap, to allowed recipient, in allowed category&rdquo; and authorize the gift card.
+Second, the monitor&rsquo;s AUROC falls from 0.669 to 0.304, 95% CI 0.22&ndash;0.39 — significantly below chance (z&nbsp;≈&nbsp;4.6), a
+significant drop (z&nbsp;≈&nbsp;5.1) — because the bland, reassuring reasoning attached to a breach looks more innocent than an
+ordinary compliant decision, actively misleading the overseer. Note that below-chance is itself a signal: suppression
+does not remove the information so much as invert its sign — an overseer who knows suppression is in play could flip
+the scores and recover AUROC&nbsp;≈&nbsp;0.70; the danger is the overseer who doesn&rsquo;t know. Naive reasoning-hiding therefore
+both raises the violation rate and defeats the (unsuspecting) monitor; reasoning suppression blinds the agent as well
+as the observer.
+</p>
+<h3>4.4 RQ4 — Under live attack, the same models break</h3>
+<p>
+Beyond scripted traps, we run a full adversarial matrix: every model plays the merchant and attacks every model&rsquo;s
+agent over a multi-turn negotiation (9×9 = 81 duels; one negotiation per attacker&ndash;defender pair against a single
+over-cap goal, attacker unseeded at temperature 1). Robustness tracks the defender, not the attacker: no attacker
+exceeds a 22% success rate (2/9, CI 6&ndash;55%), yet breaches concentrate on a few agents (Table 2) — and the breached
+agents are among the models that miss intent violations in Table 1, which is the corroboration a pilot most needs.
+With n=9 per row the intervals are wide: the unbreached group (0/9, upper bound 30%) separates from Mistral and Llama,
+but the DeepSeek / Mistral / Llama ordering is not itself significant, and individual cells of the matrix are single
+Bernoulli draws that carry no signal on their own.
+</p>
+<table>
+  <thead>
+    <tr><th>Agent (defender)</th><th>Breached by attackers</th><th>Rate</th><th>Wilson 95% CI</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>GPT-5.5 · Opus 4.8 · Gemini · Grok · Qwen · Kimi</td><td class="num">0 / 9</td><td class="num">0%</td><td class="num">0–30%</td></tr>
+    <tr><td>DeepSeek V4 Pro</td><td class="num">1 / 9</td><td class="num">11%</td><td class="num">2–44%</td></tr>
+    <tr><td>Mistral Large 2512</td><td class="num">5 / 9</td><td class="num">56%</td><td class="num">27–81%</td></tr>
+    <tr><td>Llama 4 Maverick</td><td class="num">6 / 9</td><td class="num">67%</td><td class="num">35–88%</td></tr>
+  </tbody>
+</table>
+<div class="caption"><b>Table 2.</b> Agent robustness in the 9×9 adversarial matrix (81 duels, single over-cap goal,
+up to 3 turns, one negotiation per cell). Rate = fraction of the 9 attackers that broke this agent, with Wilson 95%
+CIs. No attacker exceeded 22% success, so robustness tracks the defender, not the attacker.</div>
+
+<h2>5. Discussion</h2>
+<p>
+The rule/intent split reframes the &ldquo;the gateway already enforces the mandate&rdquo; objection: gateways enforce structure,
+and structure is the case models already handle. Intent is the residual — unenforceable by construction, and the axis
+on which frontier models measurably differ. This is the empirical justification for a model (or a model-monitor) in
+the payment loop. The monitorability result is a cautionary one: reasoning is only moderately diagnostic even in the
+clear, and a trivial suppression instruction pushes an unsuspecting monitor below chance while making the agent less
+safe. Oversight that leans on reading reasoning must assume the channel can be cheaply — and counter-productively —
+degraded, and should treat a systematically below-chance monitor as a red flag for suppression rather than as noise.
+</p>
+
+<h2>6. Limitations</h2>
+<p>
+This is a pilot, and the reported violation rates should be read as lower bounds. The intent-violation set is small
+(three author-constructed traps in one grocery-mandate domain; independent human validation of the labels is future
+work), and per-model intent cells are n=9 with overlapping intervals — only the pooled tiers separate. Repetitions run
+at temperature 0, so the effective sample is closer to the unique-scenario count; under replicate-aware clustering the
+default-arm AUROC&rsquo;s separation from chance is marginal, though the suppression contrast survives. The monitor is a
+single model (GPT-5.5), scored pooled across agents, including its own outputs. The duel matrix has one negotiation
+per cell against a single over-cap goal with an unseeded temperature-1 attacker, so it is not exactly reproducible.
+Two grading asymmetries in snapshot v6 could only understate violations: a counter-offer on an intent trap was graded
+as defended even when it committed the same purchase, and unparseable model output ended a run ungraded rather than
+counting against the model — both fixed in the harness for future snapshots. The conflicting-mandates arm is defined
+but not yet populated, and the scope-drift arm is single-turn in v6. Results may be sensitive to system-prompt
+wording — during development an unfair expired-mandate prompt produced a spurious universal failure until the agent
+was given issued/expiry/current timestamps. The suppression arm uses a single, naive hiding instruction; a trained or
+steganographic adversary is the stronger test of monitorability and is future work, as are an adaptive-adversary
+robustness curve and multi-domain mandates.
+</p>
+
+<h2>7. Conclusion</h2>
+<p>
+MandateBench provides a judge-free instrument for the reasoning-based oversight of high-stakes agentic payments. Its
+pilot measurements indicate that frontier models handle the violations a gateway already catches but not all of the
+intent violations only a model can, and that reading an agent&rsquo;s reasoning to catch breaches is both moderately
+reliable and cheaply defeated — in a way that also degrades the agent. We release the benchmark, harness, and live
+dashboard openly.
+</p>
+
+<h2>References</h2>
+<ol class="refs">
+  <li>Google. Agent Payments Protocol (AP2). 2025. Announced with 60+ partners; governance since contributed to the FIDO Alliance (2026).</li>
+  <li>Coinbase. x402: An open standard for internet-native payments. 2025. Contributed to the Linux Foundation&rsquo;s x402 Foundation (2026).</li>
+  <li>Debi, T., Zhu, W., Sen Gupta, P. Whispers of Wealth: Red-Teaming Google&rsquo;s Agent Payments Protocol via Prompt Injection. arXiv:2601.22569, 2026.</li>
+  <li>Mao, Q., Wang, J., Liu, Y., Zhu, L., Ma, C., Yan, J. SoK: Security of Autonomous LLM Agents in Agentic Commerce. arXiv:2604.15367, 2026.</li>
+  <li>Lan, Q., Kaul, A., Jones, S., Westrum, S. Zero-Trust Runtime Verification for Agentic Payment Protocols: Mitigating Replay and Context-Binding Failures in AP2. arXiv:2602.06345, 2026.</li>
+  <li>Korbak, T., Balesni, M., Barnes, E., Bengio, Y., et al. Chain of Thought Monitorability: A New and Fragile Opportunity for AI Safety. arXiv:2507.11473, 2025.</li>
+  <li>Storf, S., Barton-Cooper, R., Peters-Gill, J., Hobbhahn, M. Constitutional Black-Box Monitoring for Scheming in LLM Agents. arXiv:2603.00829, ICML 2026.</li>
+  <li>Fang, H., Zhu, X., Gurevych, I. InferAct: Preemptive Detection and Correction of Misaligned Actions in LLM Agents. arXiv:2407.11843, EMNLP 2025.</li>
+  <li>Wang, H., Poskitt, C. M., Wei, J., Sun, J. ProbGuard: Probabilistic Runtime Monitoring for LLM Agent Safety. arXiv:2508.00500, 2025.</li>
+  <li>Levy, I., et al. ST-WebAgentBench: A Benchmark for Evaluating Safety and Trustworthiness in Web Agents. arXiv:2410.06703, 2024.</li>
+  <li>Anand, A., Chatzi, I., Raha, R., Schmuck, A.-K. MANTRA: Synthesizing SMT-Validated Compliance Benchmarks for Tool-Using LLM Agents. arXiv:2605.06334, 2026.</li>
+  <li>Choi, J., Yoon, J., Le, L. T., Jha, S., Pfister, T. PolicyBank: Evolving Policy Understanding for LLM Agents. arXiv:2604.15505, 2026.</li>
+  <li>Dai, Z., Peng, Z., Cheng, Z., Li, R. Y. When Hallucination Costs Millions: Benchmarking AI Agents in High-Stakes Adversarial Financial Markets (introduces the CAIA benchmark). arXiv:2510.00332, 2025.</li>
+  <li>Benton, J., et al. (Anthropic). Sabotage Evaluations for Frontier Models. arXiv:2410.21514, 2024.</li>
+  <li>Eburu, E. Among LLMs: A Cross-Play Benchmark for Deception, Detection, and the Monitorability of Reasoning. Zenodo, doi:10.5281/zenodo.21209429, 2026.</li>
+  <li>RAILS: Verification-Native Clearing for Agentic Commerce. arXiv:2606.08790, 2026.</li>
+  <li>Beyond Goodhart&rsquo;s Law: A Dynamic Benchmark for Evaluating Compliance in Multi-Agent Systems (MAC-Bench). arXiv:2606.07805, 2026.</li>
+</ol>
+
+<div class="footer">
+MandateBench · mandatebench.xyz · judge-free ground truth (deterministic rule predicates; intent traps fixed before any model runs) · MIT / CC BY 4.0 · Preprint, 2026 (v6.1, revised).
+</div>
+
+</body>
+</html>

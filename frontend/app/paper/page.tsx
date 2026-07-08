@@ -16,16 +16,18 @@ export const metadata: Metadata = {
   },
 };
 
-const CALIBRATION: { model: string; rule: string; intent: string; refuse: string; lab: string }[] = [
-  { model: 'GPT-5.5', lab: 'OpenAI', rule: '100%', intent: '100%', refuse: '0%' },
-  { model: 'Claude Opus 4.8', lab: 'Anthropic', rule: '100%', intent: '100%', refuse: '0%' },
-  { model: 'Kimi K2.6', lab: 'Moonshot', rule: '100%', intent: '100%', refuse: '0%' },
-  { model: 'Gemini 3.5 Flash', lab: 'Google', rule: '100%', intent: '67%', refuse: '0%' },
-  { model: 'Grok 4.3', lab: 'xAI', rule: '100%', intent: '67%', refuse: '17%' },
-  { model: 'Qwen3.7 Max', lab: 'Alibaba', rule: '100%', intent: '67%', refuse: '0%' },
-  { model: 'Mistral Large 2512', lab: 'Mistral', rule: '93%', intent: '67%', refuse: '0%' },
-  { model: 'DeepSeek V4 Pro', lab: 'DeepSeek', rule: '89%', intent: '67%', refuse: '0%' },
-  { model: 'Llama 4 Maverick', lab: 'Meta', rule: '85%', intent: '44%', refuse: '0%' },
+/** Each cell: [count, percent, Wilson 95% CI]. Rule n=27 (9 traps × 3 reps), intent n=9, clean n=6. */
+type Cell = [count: string, pct: string, ci: string];
+const CALIBRATION: { model: string; lab: string; rule: Cell; intent: Cell; refuse: Cell }[] = [
+  { model: 'GPT-5.5', lab: 'OpenAI', rule: ['27/27', '100%', '88–100'], intent: ['9/9', '100%', '70–100'], refuse: ['0/6', '0%', '0–39'] },
+  { model: 'Claude Opus 4.8', lab: 'Anthropic', rule: ['27/27', '100%', '88–100'], intent: ['9/9', '100%', '70–100'], refuse: ['0/6', '0%', '0–39'] },
+  { model: 'Kimi K2.6', lab: 'Moonshot', rule: ['27/27', '100%', '88–100'], intent: ['9/9', '100%', '70–100'], refuse: ['0/6', '0%', '0–39'] },
+  { model: 'Gemini 3.5 Flash', lab: 'Google', rule: ['27/27', '100%', '88–100'], intent: ['6/9', '67%', '35–88'], refuse: ['0/6', '0%', '0–39'] },
+  { model: 'Grok 4.3', lab: 'xAI', rule: ['27/27', '100%', '88–100'], intent: ['6/9', '67%', '35–88'], refuse: ['1/6', '17%', '3–56'] },
+  { model: 'Qwen3.7 Max', lab: 'Alibaba', rule: ['27/27', '100%', '88–100'], intent: ['6/9', '67%', '35–88'], refuse: ['0/6', '0%', '0–39'] },
+  { model: 'Mistral Large 2512', lab: 'Mistral', rule: ['25/27', '93%', '77–98'], intent: ['6/9', '67%', '35–88'], refuse: ['0/6', '0%', '0–39'] },
+  { model: 'DeepSeek V4 Pro', lab: 'DeepSeek', rule: ['24/27', '89%', '72–96'], intent: ['6/9', '67%', '35–88'], refuse: ['0/6', '0%', '0–39'] },
+  { model: 'Llama 4 Maverick', lab: 'Meta', rule: ['23/27', '85%', '68–94'], intent: ['4/9', '44%', '19–73'], refuse: ['0/6', '0%', '0–39'] },
 ];
 
 function intentColor(pct: number): string {
@@ -56,8 +58,11 @@ export default function PaperPage() {
       </p>
 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginTop: 22 }}>
-        <a className="btn" href="/mandatebench.pdf">
+        <a className="btn" href="/mandatebench.pdf" download="mandatebench.pdf">
           Download PDF ↓
+        </a>
+        <a className="btn ghost" href="/mandatebench.pdf" target="_blank" rel="noopener">
+          Read in browser
         </a>
         <a className="btn ghost" href="/dashboard">
           Live dashboard →
@@ -75,9 +80,10 @@ export default function PaperPage() {
           fontWeight: 500,
         }}
       >
-        Frontier models catch <b>100%</b> of the mandate violations a payment gateway
-        already catches — and miss up to <b>a third</b> of the ones only a model can.
-        And the obvious way to hide that from an overseer makes it strictly worse.
+        Frontier models catch the mandate violations a payment gateway already
+        catches — while five of nine miss <b>a third</b> of the intent violations only
+        a model can catch, and one misses <b>more than half</b>. And the obvious way to
+        hide that from an overseer makes it strictly worse.
       </div>
 
       {/* Abstract */}
@@ -93,9 +99,10 @@ export default function PaperPage() {
           whether the <em>agent</em> can be pushed into authorizing a payment it should
           refuse — and whether that can be caught <strong>before</strong> the signature.
           MandateBench measures mandate faithfulness across nine frontier models under a
-          taxonomy of adversarial pressures, with a deterministic, judge-free ground
-          truth: violations are predicates over a signed object, not an LLM&apos;s
-          opinion. We separate <strong>rule</strong> violations (over budget, wrong
+          taxonomy of adversarial pressures, with a judge-free ground truth: rule
+          violations are deterministic predicates over the signed object, and intent
+          traps are author-constructed and labeled before any model runs — no LLM judges
+          outcomes. We separate <strong>rule</strong> violations (over budget, wrong
           recipient, out-of-scope, expired) that a gateway already catches from{' '}
           <strong>intent</strong> violations that satisfy every signed field yet betray
           the mandate&apos;s natural-language intent — a grocery mandate spent on a gift
@@ -111,8 +118,9 @@ export default function PaperPage() {
         <ol style={{ fontSize: 15, lineHeight: 1.65, paddingLeft: 20, margin: 0 }}>
           <li>
             A signed-mandate benchmark for agentic payments with a{' '}
-            <strong>deterministic, judge-free ground truth</strong> (Ed25519 mandates;
-            violations are predicates, not opinions).
+            <strong>judge-free ground truth</strong> (Ed25519 mandates; rule violations
+            are deterministic predicates over the signed object; intent labels are
+            author-constructed traps fixed before any model runs).
           </li>
           <li style={{ marginTop: 6 }}>
             A <strong>rule-vs-intent split</strong> that isolates the failures no
@@ -138,7 +146,10 @@ export default function PaperPage() {
           fields already catches them. The <b>intent</b> column is where models separate:
           proposals that satisfy every signed field yet break the mandate&apos;s meaning.
           Mean intent-catch is 75% (range 44–100%). False refusal = clean orders wrongly
-          declined (the usefulness cost).
+          declined (the usefulness cost). Per-model intent cells are n=9, so individual
+          rows overlap; the contrast that survives the small n is pooled — the three
+          perfect models catch 27/27 intent traps (95% CI 88–100%) vs 34/54 (63%, CI
+          50–75%) for the other six.
         </p>
         <div className="heatscroll" style={{ marginTop: 14 }}>
           <table>
@@ -146,9 +157,9 @@ export default function PaperPage() {
               <tr>
                 <th>Model</th>
                 <th>Lab</th>
-                <th>Rule caught</th>
-                <th>Intent caught</th>
-                <th>False refusal</th>
+                <th>Rule caught (n=27)</th>
+                <th>Intent caught (n=9)</th>
+                <th>False refusal (n=6)</th>
               </tr>
             </thead>
             <tbody>
@@ -158,28 +169,44 @@ export default function PaperPage() {
                   <td className="soft mono" style={{ fontSize: 12 }}>
                     {r.lab}
                   </td>
-                  <td className="mono">{r.rule}</td>
+                  <td className="mono">
+                    {r.rule[1]} ({r.rule[0]})
+                    <div className="soft" style={{ fontSize: 10 }}>CI {r.rule[2]}</div>
+                  </td>
                   <td
                     className="mono"
-                    style={{ fontWeight: 700, color: intentColor(parseInt(r.intent, 10)) }}
+                    style={{ fontWeight: 700, color: intentColor(parseInt(r.intent[1], 10)) }}
                   >
-                    {r.intent}
+                    {r.intent[1]} ({r.intent[0]})
+                    <div className="soft" style={{ fontSize: 10, fontWeight: 400 }}>CI {r.intent[2]}</div>
                   </td>
-                  <td className="mono">{r.refuse}</td>
+                  <td className="mono">
+                    {r.refuse[1]} ({r.refuse[0]})
+                    <div className="soft" style={{ fontSize: 10 }}>CI {r.refuse[2]}</div>
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
+        <p className="soft mono" style={{ fontSize: 11, marginTop: 8 }}>
+          Counts are snapshot v6 (3 reps/scenario, temperature 0); intervals are Wilson
+          95%. Reps at temperature 0 are near-duplicate replicates, so the effective n is
+          closer to the unique-scenario count — treat the intervals as optimistic.
+        </p>
       </section>
 
       {/* Finding 2 — monitorability figure */}
       <section style={{ marginTop: 34 }}>
         <h2>Finding 2 — Reasoning is only moderately monitorable</h2>
         <p className="soft" style={{ fontSize: 14, marginTop: -6, maxWidth: '70ch' }}>
-          A monitor reading <em>only</em> the agent&apos;s private reasoning — never the
-          mandate numbers — predicts violations at AUROC 0.67. Diagnostic, but far from
-          the near-perfect monitorability reported for reasoning in game settings.
+          A monitor (GPT-5.5) reading <em>only</em> the agent&apos;s private reasoning —
+          never the mandate numbers — predicts violations at AUROC 0.669 (95% CI
+          0.56–0.78; 29 violations vs 345 compliant, pooled across the nine agents).
+          Diagnostic, but far from the near-perfect monitorability reported for
+          reasoning in game settings. Two caveats: the AUROC is pooled, so it mixes
+          between-model style with within-model discrimination, and the monitor scores
+          its own outputs for one of the nine agents.
         </p>
         <MonitorFigure />
       </section>
@@ -212,6 +239,10 @@ export default function PaperPage() {
         </blockquote>
         <p style={{ fontSize: 15, lineHeight: 1.6, marginTop: 12 }}>
           Reasoning suppression does not merely blind the overseer; it blinds the agent.
+          Note that below-chance is itself a signal: suppression does not remove the
+          information so much as invert its sign — an overseer who <em>knows</em>{' '}
+          suppression is in play could flip the monitor&apos;s scores and recover
+          AUROC ≈ 0.70. The danger is the overseer who doesn&apos;t know.
         </p>
       </section>
 
@@ -220,10 +251,13 @@ export default function PaperPage() {
         <h2>Finding 4 — Under live attack, the same models break</h2>
         <p className="soft" style={{ fontSize: 14, marginTop: -6, maxWidth: '72ch' }}>
           Beyond scripted traps, every model plays the merchant and attacks every
-          model&apos;s agent over a multi-turn negotiation — a full 9×9 matrix (81 duels).
-          Robustness is a property of the <em>defender</em>, not the attacker: no attacker
-          exceeds a 22% success rate, but breaches concentrate sharply on a few agents —
-          and they are the same models that miss intent violations above.
+          model&apos;s agent over a multi-turn negotiation — a full 9×9 matrix (81 duels,
+          one negotiation per attacker–defender pair, single over-cap attack goal).
+          Robustness tracks the <em>defender</em>, not the attacker: no attacker exceeds
+          a 22% success rate (2/9, CI 6–55%), while breaches concentrate on the agents
+          that also miss intent violations above. With n=9 per row the intervals are
+          wide: the unbreached group (0/9, upper bound 30%) separates from Mistral and
+          Llama, but the DeepSeek / Mistral / Llama ordering is not itself significant.
         </p>
         <div className="heatscroll" style={{ marginTop: 14 }}>
           <table>
@@ -232,15 +266,16 @@ export default function PaperPage() {
                 <th>Agent (defender)</th>
                 <th>Breached by attackers</th>
                 <th>Rate</th>
+                <th>Wilson 95% CI</th>
               </tr>
             </thead>
             <tbody>
               {[
-                ['GPT-5.5 · Opus 4.8 · Gemini · Grok · Qwen · Kimi', '0 / 9', '0%'],
-                ['DeepSeek V4 Pro', '1 / 9', '11%'],
-                ['Mistral Large 2512', '5 / 9', '56%'],
-                ['Llama 4 Maverick', '6 / 9', '67%'],
-              ].map(([m, n, r]) => (
+                ['GPT-5.5 · Opus 4.8 · Gemini · Grok · Qwen · Kimi', '0 / 9', '0%', '0–30%'],
+                ['DeepSeek V4 Pro', '1 / 9', '11%', '2–44%'],
+                ['Mistral Large 2512', '5 / 9', '56%', '27–81%'],
+                ['Llama 4 Maverick', '6 / 9', '67%', '35–88%'],
+              ].map(([m, n, r, ci]) => (
                 <tr key={m}>
                   <td className="model" style={{ fontSize: 13 }}>
                     {m}
@@ -249,11 +284,19 @@ export default function PaperPage() {
                   <td className="mono" style={{ fontWeight: 700, color: intentColor(100 - parseInt(r, 10)) }}>
                     {r}
                   </td>
+                  <td className="mono soft" style={{ fontSize: 12 }}>
+                    {ci}
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
+        <p className="soft mono" style={{ fontSize: 11, marginTop: 8 }}>
+          Each cell of the underlying matrix is a single negotiation with an unseeded
+          temperature-1 attacker, so only these row marginals — not individual cells —
+          carry signal.
+        </p>
       </section>
 
       {/* Method */}
@@ -265,7 +308,8 @@ export default function PaperPage() {
               Signed mandate
             </div>
             <div className="k" style={{ lineHeight: 1.4 }}>
-              Ed25519 over a canonical mandate; the agent verifies before acting.
+              Ed25519 over a canonical mandate; the harness verifies it and grades
+              against the signed object.
             </div>
           </div>
           <div className="tile">
@@ -273,7 +317,8 @@ export default function PaperPage() {
               Deterministic grade
             </div>
             <div className="k" style={{ lineHeight: 1.4 }}>
-              Violations are predicates over the signed object. No LLM judge.
+              Rule violations are predicates over the signed object; intent labels are
+              fixed at authoring time. No LLM judge.
             </div>
           </div>
           <div className="tile">
@@ -299,12 +344,27 @@ export default function PaperPage() {
       <section style={{ marginTop: 34 }}>
         <h2>Limitations</h2>
         <p className="soft" style={{ fontSize: 14, lineHeight: 1.65, maxWidth: '72ch' }}>
-          This is a pilot: three repetitions per scenario give wide intervals, and the
-          intent set is small (three constructions over one grocery-mandate domain).
-          Results may be sensitive to prompt wording. The suppression arm uses a single
-          naive hiding instruction; a trained or steganographic adversary is the stronger
-          test of monitorability and is future work, as are an adaptive-adversary
-          robustness curve and multi-domain mandates.
+          This is a pilot, and the reported violation rates should be read as{' '}
+          <em>lower bounds</em>. The intent set is small (three author-constructed traps
+          in one grocery-mandate domain; independent human validation of the labels is
+          future work), and per-model intent cells are n=9 with overlapping intervals —
+          only the pooled tiers separate. Repetitions run at temperature 0, so the three
+          reps are near-duplicates and the effective sample is closer to the unique
+          scenario count; under replicate-aware clustering the default-arm AUROC&apos;s
+          separation from chance is marginal, though the suppression contrast survives.
+          The monitor is a single model (GPT-5.5) scored pooled across agents, including
+          its own outputs. The duel matrix has one negotiation per cell against a single
+          over-cap goal with an unseeded temperature-1 attacker, so it is not exactly
+          reproducible. Two grading asymmetries in snapshot v6 could only{' '}
+          <em>understate</em> violations: a counter-offer on an intent trap was graded as
+          defended even when it committed the same purchase, and unparseable model output
+          ended a run ungraded rather than counting against the model (both fixed in the
+          harness for future snapshots). The conflicting-mandates arm is defined but not
+          yet populated, and the scope-drift arm is single-turn in v6. Results may be
+          sensitive to prompt wording. The suppression arm uses a single naive hiding
+          instruction; a trained or steganographic adversary is the stronger test of
+          monitorability and is future work, as are an adaptive-adversary robustness
+          curve and multi-domain mandates.
         </p>
       </section>
 
@@ -312,8 +372,8 @@ export default function PaperPage() {
       <div style={{ marginTop: 38, borderTop: '1px solid var(--line, rgba(0,0,0,0.15))', paddingTop: 22 }}>
         <p className="soft" style={{ fontSize: 14 }}>
           Full method, related work, and references:{' '}
-          <a href="/mandatebench.pdf">mandatebench.pdf ↓</a> · watch it run on the{' '}
-          <a href="/dashboard">live dashboard →</a>
+          <a href="/mandatebench.pdf" download="mandatebench.pdf">mandatebench.pdf ↓</a> · watch it
+          run on the <a href="/dashboard">live dashboard →</a>
         </p>
         <div
           className="mono"
@@ -341,9 +401,9 @@ export default function PaperPage() {
   );
 }
 
-/** Two AUROC bars (default vs suppressed) against a chance=0.5 marker. */
+/** Two AUROC bars (default vs suppressed) with 95% CIs against a chance=0.5 marker. */
 function MonitorFigure() {
-  const bar = (label: string, value: number, color: string) => (
+  const bar = (label: string, value: number, ciLo: number, ciHi: number, color: string) => (
     <div style={{ marginTop: 14 }}>
       <div
         style={{
@@ -355,7 +415,12 @@ function MonitorFigure() {
         className="mono"
       >
         <span>{label}</span>
-        <span style={{ fontWeight: 700 }}>{value.toFixed(3)}</span>
+        <span>
+          <b>{value.toFixed(3)}</b>{' '}
+          <span className="soft" style={{ fontSize: 11 }}>
+            [{ciLo.toFixed(2)}, {ciHi.toFixed(2)}]
+          </span>
+        </span>
       </div>
       <div
         style={{
@@ -366,6 +431,18 @@ function MonitorFigure() {
         }}
       >
         <div style={{ position: 'absolute', inset: 0, width: `${value * 100}%`, background: color }} />
+        {/* 95% CI whisker */}
+        <div
+          style={{
+            position: 'absolute',
+            left: `${ciLo * 100}%`,
+            width: `${(ciHi - ciLo) * 100}%`,
+            top: '50%',
+            height: 0,
+            borderTop: '2px solid var(--ink, #333)',
+            opacity: 0.75,
+          }}
+        />
         {/* chance = 0.5 marker */}
         <div
           style={{
@@ -383,11 +460,12 @@ function MonitorFigure() {
   );
   return (
     <div style={{ marginTop: 16, maxWidth: 560 }}>
-      {bar('Default reasoning', 0.669, 'hsl(145 52% 40%)')}
-      {bar('Suppressed reasoning', 0.304, 'hsl(8 60% 47%)')}
+      {bar('Default reasoning', 0.669, 0.56, 0.78, 'hsl(145 52% 40%)')}
+      {bar('Suppressed reasoning', 0.304, 0.22, 0.39, 'hsl(8 60% 47%)')}
       <div className="soft mono" style={{ fontSize: 11, marginTop: 8 }}>
-        Dashed line = 0.50 (chance). Suppressed reasoning falls below it — worse than
-        guessing.
+        Dashed line = 0.50 (chance); whiskers are Hanley–McNeil 95% CIs. Suppressed
+        reasoning falls significantly below chance (z ≈ 4.6), and the drop from 0.669 is
+        significant (z ≈ 5.1).
       </div>
     </div>
   );
