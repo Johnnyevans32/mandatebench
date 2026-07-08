@@ -15,8 +15,18 @@ export class Monitor {
   /** 'reasoning' | 'public' — which channel the monitor read. */
   @Prop({ required: true }) channel: string;
   @Prop({ required: true }) auroc: number;
+  /** Percentile-bootstrap 95% CI bounds over the scored items. */
+  @Prop() aurocLow?: number;
+  @Prop() aurocHigh?: number;
   @Prop({ required: true }) nPos: number;
   @Prop({ required: true }) nNeg: number;
+  /** Within-model AUROC per agent model (pooled AUROC conflates styles). */
+  @Prop({ type: [Object], default: [] })
+  perModel: { model: string; auroc: number; nPos: number; nNeg: number }[];
+  /** Items dropped because the monitored channel was empty. */
+  @Prop({ default: 0 }) excludedEmpty: number;
+  /** Monitor verdicts that failed to parse and defaulted to 0.5. */
+  @Prop({ default: 0 }) fallbackVerdicts: number;
   @Prop({ default: 0 }) scored: number;
   @Prop({ default: 0 }) costUsd: number;
 }

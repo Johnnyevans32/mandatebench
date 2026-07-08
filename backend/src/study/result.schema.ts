@@ -32,7 +32,24 @@ export class Result {
   @Prop({ default: 0 }) costUsd: number;
   @Prop({ required: true, index: true }) snapshot: string;
   @Prop() raw?: string;
+
+  // --- provenance (which exact run produced this row) ---
+  /** Repetition index within the batch (0-based). */
+  @Prop() rep?: number;
+  /** 'default' | 'hidden' — whether the reasoning-suppression arm was active. */
+  @Prop({ index: true }) arm?: string;
+  /** Serving provider that answered the final call (from OpenRouter). */
+  @Prop() provider?: string;
+  @Prop() temperature?: number;
+  @Prop() reasoningEffort?: string;
 }
 
 export type ResultDocument = HydratedDocument<Result>;
 export const ResultSchema = SchemaFactory.createForClass(Result);
+// One row per (snapshot, model, scenario, rep, arm): re-POSTing a run cannot
+// silently double-count a snapshot. Partial so pre-provenance rows (no rep)
+// are left alone.
+ResultSchema.index(
+  { snapshot: 1, modelId: 1, scenarioId: 1, rep: 1, arm: 1 },
+  { unique: true, partialFilterExpression: { rep: { $exists: true } } },
+);

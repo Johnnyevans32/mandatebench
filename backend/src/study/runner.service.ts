@@ -20,6 +20,16 @@ import { Result, ResultDocument } from './result.schema';
 const RUN_CLOCK_SEC = 1_700_000_000;
 const CONCURRENCY = 4;
 
+/** Deterministic 31-bit seed from a run's coordinates (FNV-1a). */
+export function deriveSeed(...parts: (string | number)[]): number {
+  let h = 0x811c9dc5;
+  for (const ch of parts.join('|')) {
+    h ^= ch.charCodeAt(0);
+    h = Math.imul(h, 0x01000193);
+  }
+  return (h >>> 0) % 0x7fffffff;
+}
+
 /** The attack goals a duel can pursue (each a violating target cart). */
 export function attackGoal(id: string): AttackGoal {
   const base: Cart = {
@@ -66,7 +76,8 @@ async function pool<T>(items: T[], n: number, fn: (item: T) => Promise<void>): P
 export class RunnerService {
   private readonly log = new Logger('Runner');
   private running = false;
-  private readonly client = new OpenRouterClient(loadConfig());
+  private readonly cfg = loadConfig();
+  private readonly client = new OpenRouterClient(this.cfg);
 
   constructor(
     @InjectModel(Result.name) private readonly results: Model<ResultDocument>,
@@ -108,14 +119,16 @@ export class RunnerService {
     let ran = 0;
     let spentUsd = 0;
     let errors = 0;
+    const arm = hideReasoning ? 'hidden' : 'default';
     try {
-      await pool(tasks, CONCURRENCY, async ({ model }) => {
+      await pool(tasks, CONCURRENCY, async ({ model, rep }) => {
         for (const scenario of createScenarioSet(RUN_CLOCK_SEC)) {
           if (spentUsd >= budget) return;
           try {
             const r = await runScenario(this.client, scenario, model, {
               nowSec: RUN_CLOCK_SEC,
               temperature: 0,
+              seed: deriveSeed(snapshot, arm, model, scenario.id, rep),
               hideReasoning,
             });
             spentUsd += r.costUsd;
@@ -140,6 +153,11 @@ export class RunnerService {
               costUsd: r.costUsd,
               snapshot,
               raw: r.raw,
+              rep,
+              arm,
+              provider: r.provider,
+              temperature: 0,
+              reasoningEffort: this.cfg.reasoningEffort,
             });
           } catch (err) {
             errors++;
@@ -179,23 +197,25 @@ export class RunnerService {
     const goals = opts.goals?.length ? opts.goals : ['over_cap'];
     const signed = issueMandate(defaultMandate(RUN_CLOCK_SEC), createIssuer());
 
-    const tasks: { attacker: string; agent: string; goal: string }[] = [];
+    const tasks: { attacker: string; agent: string; goal: string; rep: number }[] = [];
     for (let rep = 0; rep < reps; rep++)
       for (const attacker of attackers)
         for (const agent of agents)
-          for (const goal of goals) tasks.push({ attacker, agent, goal });
+          for (const goal of goals) tasks.push({ attacker, agent, goal, rep });
 
     let ran = 0;
     let spentUsd = 0;
     let errors = 0;
     try {
-      await pool(tasks, CONCURRENCY, async ({ attacker, agent, goal }) => {
+      await pool(tasks, CONCURRENCY, async ({ attacker, agent, goal, rep }) => {
         if (spentUsd >= budget) return;
         try {
-          const merchant = new LlmMerchant(this.client, attacker);
+          const seed = deriveSeed(snapshot, attacker, agent, goal, rep);
+          const merchant = new LlmMerchant(this.client, attacker, seed);
           const r = await runDuel(this.client, agent, merchant, attacker, signed, attackGoal(goal), {
             nowSec: RUN_CLOCK_SEC,
             maxTurns,
+            seed,
           });
           spentUsd += r.costUsd;
           ran++;
@@ -209,6 +229,9 @@ export class RunnerService {
             transcript: r.transcript,
             costUsd: r.costUsd,
             snapshot,
+            rep,
+            seed,
+            maxTurns,
           });
         } catch (err) {
           errors++;
@@ -246,6 +269,7 @@ export class RunnerService {
         reasoning: r.privateReasoning ?? '',
         publicStatement: r.publicStatement,
         violated: r.violated,
+        model: r.modelId,
       }));
       const run = await runMonitor(this.client, monitorModel, items, channel);
       await this.monitors.create({
@@ -253,8 +277,13 @@ export class RunnerService {
         monitorModel,
         channel,
         auroc: run.auroc,
+        aurocLow: run.aurocLow,
+        aurocHigh: run.aurocHigh,
         nPos: run.nPos,
         nNeg: run.nNeg,
+        perModel: run.perModel,
+        excludedEmpty: run.excludedEmpty,
+        fallbackVerdicts: run.fallbackVerdicts,
         scored: run.scores.length,
         costUsd: run.costUsd,
       });

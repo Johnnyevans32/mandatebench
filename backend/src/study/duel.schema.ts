@@ -14,7 +14,20 @@ export class Duel {
   @Prop({ type: Array, default: [] }) transcript: unknown[];
   @Prop({ default: 0 }) costUsd: number;
   @Prop({ required: true, index: true }) snapshot: string;
+
+  // --- provenance ---
+  /** Repetition index within the matrix run (0-based). */
+  @Prop() rep?: number;
+  /** Deterministic sampling seed sent with both parties' calls. */
+  @Prop() seed?: number;
+  @Prop() maxTurns?: number;
 }
 
 export type DuelDocument = HydratedDocument<Duel>;
 export const DuelSchema = SchemaFactory.createForClass(Duel);
+// One duel per (snapshot, attacker, agent, goal, rep); partial so
+// pre-provenance rows (no rep) are left alone.
+DuelSchema.index(
+  { snapshot: 1, attackerModel: 1, agentModel: 1, goal: 1, rep: 1 },
+  { unique: true, partialFilterExpression: { rep: { $exists: true } } },
+);
