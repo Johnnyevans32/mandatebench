@@ -22,7 +22,11 @@ export class StudyController {
   }
 
   @Post('runner/run')
-  run(@Query('snapshot') snapshot?: string, @Body('models') models?: string[]) {
+  run(
+    @Query('snapshot') snapshot?: string,
+    @Query('reps') reps?: string,
+    @Body('models') models?: string[],
+  ) {
     const snapshot_ = this.snap(snapshot);
     if (this.runner.isRunning()) {
       return { started: false, reason: 'runner already active' };
@@ -30,10 +34,42 @@ export class StudyController {
     // Fire-and-forget: a full batch can take minutes, so return immediately and
     // let it run in the background. Poll /api/runner/status for completion.
     void this.runner
-      .runBatch({ snapshot: snapshot_, models })
+      .runBatch({ snapshot: snapshot_, models, reps: reps ? Number(reps) : undefined })
       .then((r) => this.log.log(`batch done: ${JSON.stringify(r)}`))
       .catch((e) => this.log.error(`batch failed: ${(e as Error).message}`));
-    return { started: true, snapshot: snapshot_, models: models ?? 'default roster' };
+    return { started: true, snapshot: snapshot_, reps: reps ? Number(reps) : 1 };
+  }
+
+  @Post('runner/duel')
+  duel(
+    @Query('snapshot') snapshot?: string,
+    @Query('reps') reps?: string,
+    @Body() body?: { attackers?: string[]; agents?: string[]; goals?: string[]; maxTurns?: number },
+  ) {
+    const snapshot_ = this.snap(snapshot);
+    if (this.runner.isRunning()) {
+      return { started: false, reason: 'runner already active' };
+    }
+    void this.runner
+      .runDuelMatrix({ snapshot: snapshot_, reps: reps ? Number(reps) : undefined, ...body })
+      .then((r) => this.log.log(`duel matrix done: ${JSON.stringify(r)}`))
+      .catch((e) => this.log.error(`duel matrix failed: ${(e as Error).message}`));
+    return { started: true, snapshot: snapshot_ };
+  }
+
+  @Get('duel-matrix')
+  duelMatrix(@Query('snapshot') snapshot?: string) {
+    return this.study.duelMatrix(this.snap(snapshot));
+  }
+
+  @Get('duel-summary')
+  duelSummary(@Query('snapshot') snapshot?: string) {
+    return this.study.duelSummary(this.snap(snapshot));
+  }
+
+  @Get('duels')
+  duelsList(@Query('snapshot') snapshot?: string) {
+    return this.study.duels_list(this.snap(snapshot));
   }
 
   @Get('leaderboard')
