@@ -1,0 +1,21 @@
+# Fly.io config for the MandateBench backend (NestJS + on-demand runner).
+# Secrets (MONGODB_URI, OPENROUTER_API_KEY) are set with `fly secrets set` — never here.
+# Everything else rides the defaults in src/configuration.ts.
+app = "mandatebench"
+primary_region = "iad"
+
+[build]
+
+# No [env] block: only secrets are managed config; the rest uses
+# configuration.ts defaults (CORS already allows https://mandatebench.xyz).
+
+[http_service]
+  internal_port = 3001        # must match Nest's default PORT
+  force_https = true
+  auto_start_machines = true
+  auto_stop_machines = false  # keep alive so long fire-and-forget runs finish
+  min_machines_running = 1
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"
