@@ -1,4 +1,12 @@
+import type { Metadata } from 'next';
 import { loadSnapshot, PRESSURES, PRESSURE_LABELS } from '../../lib/api';
+
+export const metadata: Metadata = {
+  title: 'Live leaderboard · MandateBench',
+  description:
+    'Live per-model violation rates, rule-vs-intent calibration, monitor AUROC, and the adversarial duel matrix for nine frontier LLM payment agents.',
+  alternates: { canonical: '/dashboard' },
+};
 
 export const dynamic = 'force-dynamic';
 

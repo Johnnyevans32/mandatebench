@@ -6,6 +6,15 @@ export const metadata: Metadata = {
   title: 'Preprint · MandateBench | Mandate faithfulness & pre-signature monitorability',
   description:
     'MandateBench: measuring whether LLM payment agents honour cryptographically signed spending mandates under adversarial pressure, and whether a monitor can catch a breach before the irreversible signature. Separates rule violations a gateway can catch from intent violations only the model can.',
+  alternates: { canonical: '/paper' },
+  openGraph: {
+    type: 'article',
+    title: 'MandateBench: Mandate Faithfulness and Pre-Signature Monitorability for Agentic-Payment LLMs',
+    description:
+      'No frontier model reliably catches the payment violations only a model can catch. And telling the agent to hide its reasoning makes it violate more while its overseer drops below chance.',
+    url: 'https://mandatebench.xyz/paper',
+    images: [{ url: '/og.png', width: 1200, height: 630, alt: 'MandateBench preprint' }],
+  },
   other: {
     citation_title:
       'MandateBench: Mandate Faithfulness and Pre-Signature Monitorability for Agentic-Payment LLMs',
@@ -112,9 +121,64 @@ function intentColor(pct: number): string {
   return `hsl(${145 - t * 137} 55% 42%)`;
 }
 
+/** Structured data: the article (with DOI + ORCID) and the open dataset, so the
+ *  paper is eligible for rich results and Google Dataset Search. */
+const JSON_LD = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'ScholarlyArticle',
+      headline:
+        'MandateBench: Mandate Faithfulness and Pre-Signature Monitorability for Agentic-Payment LLMs',
+      author: {
+        '@type': 'Person',
+        name: 'Evans Eburu',
+        sameAs: [
+          'https://orcid.org/0009-0003-9744-7414',
+          'https://www.linkedin.com/in/0xjevan',
+          'https://github.com/Johnnyevans32',
+        ],
+      },
+      datePublished: '2026-07-17',
+      identifier: 'https://doi.org/10.5281/zenodo.21411376',
+      url: 'https://mandatebench.xyz/paper',
+      sameAs: 'https://doi.org/10.5281/zenodo.21411376',
+      license: 'https://creativecommons.org/licenses/by/4.0/',
+      isAccessibleForFree: true,
+      encoding: {
+        '@type': 'MediaObject',
+        contentUrl: 'https://mandatebench.xyz/mandatebench.pdf',
+        encodingFormat: 'application/pdf',
+      },
+      about: ['AI safety', 'agentic payments', 'LLM agents', 'chain-of-thought monitoring'],
+    },
+    {
+      '@type': 'Dataset',
+      name: 'MandateBench frozen results (snapshots v6 and v7)',
+      description:
+        'Frozen aggregate exports of graded authorization runs for nine frontier LLMs under adversarial pressure: calibration by violation class, violation rates, monitor AUROC, and adversarial duels, all with confidence intervals.',
+      identifier: 'https://doi.org/10.5281/zenodo.21411376',
+      license: 'https://creativecommons.org/licenses/by/4.0/',
+      isAccessibleForFree: true,
+      creator: { '@type': 'Person', name: 'Evans Eburu' },
+      distribution: [
+        {
+          '@type': 'DataDownload',
+          encodingFormat: 'application/json',
+          contentUrl: 'https://doi.org/10.5281/zenodo.21411376',
+        },
+      ],
+    },
+  ],
+};
+
 export default function PaperPage() {
   return (
     <main className="wrap" style={{ maxWidth: 860, paddingTop: 48, paddingBottom: 64 }}>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(JSON_LD) }}
+      />
       <div className="kicker">Preprint · v7 · 2026</div>
       <h1 style={{ fontSize: 36, margin: '10px 0 14px', letterSpacing: '-0.02em', lineHeight: 1.12 }}>
         Mandate Faithfulness and Pre-Signature Monitorability for Agentic-Payment LLMs

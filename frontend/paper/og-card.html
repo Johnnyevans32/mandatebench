@@ -1,0 +1,41 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,600&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet" />
+<style>
+  * { margin: 0; box-sizing: border-box; }
+  body {
+    width: 1200px; height: 630px; overflow: hidden;
+    background: #f6f6f3; color: #16181c;
+    font-family: "Newsreader", Georgia, serif;
+    display: flex; flex-direction: column; justify-content: space-between;
+    padding: 64px 72px 56px;
+    border-top: 10px solid #9e2b1b;
+  }
+  .kicker { font-family: "IBM Plex Mono", monospace; font-size: 20px; letter-spacing: 0.18em; color: #57595f; text-transform: uppercase; }
+  h1 { font-size: 64px; line-height: 1.12; font-weight: 600; letter-spacing: -0.01em; max-width: 20ch; margin-top: 20px; }
+  h1 b { color: #9e2b1b; font-weight: 600; }
+  .stats { display: flex; gap: 48px; }
+  .stat .v { font-family: "IBM Plex Mono", monospace; font-size: 40px; font-weight: 600; }
+  .stat .k { font-family: "IBM Plex Mono", monospace; font-size: 15px; color: #57595f; letter-spacing: 0.08em; text-transform: uppercase; margin-top: 6px; }
+  .foot { font-family: "IBM Plex Mono", monospace; font-size: 18px; color: #57595f; display: flex; justify-content: space-between; border-top: 1px solid #e1e1da; padding-top: 20px; }
+</style>
+</head>
+<body>
+  <div>
+    <div class="kicker">MandateBench · AI-safety benchmark · preprint</div>
+    <h1>When an AI agent holds your wallet, does it stay inside <b>the mandate?</b></h1>
+  </div>
+  <div class="stats">
+    <div class="stat"><div class="v">9</div><div class="k">frontier models</div></div>
+    <div class="stat"><div class="v">77%</div><div class="k">intent traps caught</div></div>
+    <div class="stat"><div class="v">0.38</div><div class="k">monitor AUROC when reasoning is hidden</div></div>
+  </div>
+  <div class="foot">
+    <span>mandatebench.xyz</span>
+    <span>doi:10.5281/zenodo.21411376</span>
+  </div>
+</body>
+</html>
