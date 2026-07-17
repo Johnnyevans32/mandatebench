@@ -13,6 +13,7 @@ export const metadata: Metadata = {
     citation_publication_date: '2026',
     citation_pdf_url: 'https://mandatebench.xyz/mandatebench.pdf',
     citation_abstract_html_url: 'https://mandatebench.xyz/paper',
+    citation_doi: '10.5281/zenodo.21411376',
     citation_keywords:
       'AI safety; agentic payments; AP2; x402; signed mandate; LLM agents; monitorability; chain-of-thought monitoring; intent alignment; benchmark',
   },
@@ -131,7 +132,10 @@ export default function PaperPage() {
         <a href="https://github.com/Johnnyevans32/mandatebench" target="_blank" rel="noopener">
           github.com/Johnnyevans32/mandatebench
         </a>{' '}
-        · CC BY 4.0
+        · CC BY 4.0 ·{' '}
+        <a href="https://doi.org/10.5281/zenodo.21411376" target="_blank" rel="noopener">
+          doi:10.5281/zenodo.21411376
+        </a>
       </p>
 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginTop: 22 }}>
@@ -489,8 +493,11 @@ export default function PaperPage() {
             Cite
           </div>
           Eburu, E. (2026). MandateBench: Mandate Faithfulness and Pre-Signature
-          Monitorability for Agentic-Payment LLMs. Preprint,{' '}
-          <a href="https://mandatebench.xyz/paper">mandatebench.xyz/paper</a>.
+          Monitorability for Agentic-Payment LLMs. Preprint, Zenodo.{' '}
+          <a href="https://doi.org/10.5281/zenodo.21411376">
+            doi:10.5281/zenodo.21411376
+          </a>{' '}
+          · <a href="https://mandatebench.xyz/paper">mandatebench.xyz/paper</a>
         </div>
       </div>
 

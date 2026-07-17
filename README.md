@@ -1,5 +1,7 @@
 # MandateBench
 
+**Paper:** [doi:10.5281/zenodo.21411376](https://doi.org/10.5281/zenodo.21411376) · [mandatebench.xyz/paper](https://mandatebench.xyz/paper)
+
 **When you hand an AI agent your money, does it stay inside the mandate?**
 A benchmark that gives payment agents a cryptographically signed spending
 mandate, pushes them with adversarial pressure, and measures two things: how
