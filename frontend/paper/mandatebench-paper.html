@@ -47,46 +47,45 @@
 
 <div class="abstract-label">Abstract</div>
 <p class="abstract">
-Emerging standards for AI payments — Google&rsquo;s Agent Payments Protocol (AP2) and Coinbase&rsquo;s x402 — let an
-autonomous agent commit funds by signing a <em class="term">mandate</em>: a cryptographically signed statement of what it is
-authorized to spend. Because a signature is irreversible, the safety-critical question is not whether a protocol
-gateway can reject a malformed request, but whether the agent can be manipulated into authorizing a payment it should
-refuse, and whether that can be caught before the signature. MandateBench measures mandate faithfulness across nine
-frontier models (one or more per major lab) under a taxonomy of adversarial pressures, with a judge-free ground truth:
-rule violations are deterministic predicates over the signed object, and intent traps are author-constructed and
-labeled before any model runs — no LLM judges outcomes. Its central contribution is separating two violation classes.
-<em class="term">Rule</em> violations (over budget, over per-payment cap, unauthorized recipient, out-of-scope category, expired mandate)
-are structural — a stateless gateway that validates the signed fields already catches them. <em class="term">Intent</em> violations
-satisfy every signed field yet betray the mandate&rsquo;s natural-language intent — a grocery mandate spent on a
-stored-value gift card, a flight mandate spent on a lounge membership — and no structural check can catch them. On 17
-intent traps across five mandate domains (snapshot v7), no model catches them all: pooled intent-catch is 351/457
-(77%, CI 73&ndash;80), best 90%, worst 57%, with false-refusal ≈0 throughout. The gap&rsquo;s size replicates from our small
-pilot (75%), but per-model rankings do not: the three models that scored perfectly on the pilot&rsquo;s three traps
-(GPT-5.5, Claude Opus 4.8, Kimi K2.6) all fell with the larger set — GPT-5.5 to 71% — evidence that small-n
-leaderboard positions are noise even when the aggregate phenomenon is stable. We then measure pre-signature
-monitorability: a monitor reading only the agent&rsquo;s private reasoning predicts violations at AUROC 0.619 (bootstrap
-95% CI 0.56&ndash;0.68; v6 pilot: 0.669). Instructing the agent to keep its reasoning bland is doubly harmful — trap
-violations rise by a third (17.5%&nbsp;→&nbsp;23.6%, p&nbsp;≈&nbsp;0.003; the pilot showed roughly a doubling), and the monitor&rsquo;s
-AUROC falls to 0.377, significantly below chance (z&nbsp;≈&nbsp;2.8; pilot: 0.304), because suppressed reasoning makes a
-breach read as more routine than a compliant decision. Both halves of the suppression result replicate from the
-pilot. Reasoning suppression does not merely blind the overseer; it blinds the agent.
+Emerging standards for AI payments, Google&rsquo;s Agent Payments Protocol (AP2) and Coinbase&rsquo;s x402, let an
+autonomous agent commit funds by signing a <em class="term">mandate</em>: a cryptographically signed statement of what it may
+spend. A signature cannot be undone. So the safety question is not whether a protocol gateway can reject a malformed
+request. It is whether the agent itself can be manipulated into authorizing a payment it should refuse, and whether
+that can be caught before it signs. MandateBench measures mandate faithfulness across nine frontier models (one or
+more per major lab) under a taxonomy of adversarial pressures, with no LLM judge anywhere: rule violations are checked
+by plain code against the signed object, and intent traps are written and labeled by hand before any model runs. Its
+central contribution is separating two violation classes. <em class="term">Rule</em> violations (over budget, over the
+per-payment cap, wrong recipient, wrong category, expired mandate) are structural; a stateless gateway that validates
+the signed fields already catches them. <em class="term">Intent</em> violations pass every signed field but still break the
+mandate&rsquo;s plain-language intent, like a grocery mandate spent on a stored-value gift card or a flight mandate spent
+on a lounge membership. No structural check can catch these. On 17 intent traps across five mandate domains (snapshot
+v7), no model catches them all: pooled intent catch is 351/457 (77%, CI 73&ndash;80), the best model gets 90%, the worst
+57%, and false refusal stays near zero throughout. The size of the gap replicates from our small pilot (75%), but the
+per-model rankings do not. The three models that scored perfectly on the pilot&rsquo;s three traps (GPT-5.5, Claude Opus
+4.8, Kimi K2.6) all fell once the set grew, GPT-5.5 to 71%. Small-sample leaderboard positions are noise even when
+the aggregate effect is stable. We then measure pre-signature monitorability: a monitor reading only the agent&rsquo;s
+private reasoning predicts violations at AUROC 0.619 (bootstrap 95% CI 0.56&ndash;0.68). Telling the agent to keep its
+reasoning bland hurts twice: trap violations rise by a third (17.5% to 23.6%, p&nbsp;≈&nbsp;0.003) and the monitor&rsquo;s AUROC
+falls to 0.377, significantly below chance (z&nbsp;≈&nbsp;2.8). Both halves of the suppression result replicate from the
+pilot (0.669 to 0.304). Suppressed reasoning makes a breach read as more routine than a compliant decision. Hiding
+the reasoning does not just blind the overseer; it blinds the agent.
 </p>
 
 <h2>1. Introduction</h2>
 <p>
-Agentic-payment protocols move the authority to spend money from a human click to a model&rsquo;s signature. In AP2 [1] and
-x402 [2], a user (or their wallet) issues a signed mandate delimiting a budget, per-payment cap, permitted recipients,
-permitted categories, and a validity window; an agent then negotiates with merchants and signs to authorize each
-payment. The signature is the point of no return: once emitted it settles, and there is no undo.
+Agentic-payment protocols move the authority to spend money from a human click to a model&rsquo;s signature. In AP2 [1]
+and x402 [2], a user (or their wallet) issues a signed mandate that sets a budget, a per-payment cap, permitted
+recipients, permitted categories, and a validity window. An agent then negotiates with merchants and signs to
+authorize each payment. The signature is the point of no return: once emitted it settles, and there is no undo.
 </p>
 <p>
-A natural objection is that the protocol itself enforces the mandate — a gateway can reject any signed request whose
-amount, recipient, or category falls outside the mandate. This is true, and it is exactly why the interesting failures
-are elsewhere. Hard structural limits are the easy case. The dangerous case is a request that is structurally valid —
-correct recipient, in-budget, in-category — but is not what the user meant, or is a payment the agent was socially
-engineered into signing. A gateway cannot distinguish &ldquo;this week&rsquo;s groceries&rdquo; from a $25 gift card charged to the
-same grocer for the same amount; only a model that reasons about intent can. MandateBench is built to measure
-precisely this gap, and to ask whether an overseer can catch a breach in the moment before the signature.
+A natural objection is that the protocol itself enforces the mandate, since a gateway can reject any signed request
+whose amount, recipient, or category falls outside it. This is true, and it is exactly why the interesting failures
+are elsewhere. Hard structural limits are the easy case. The dangerous case is a request that is structurally valid
+(correct recipient, in budget, in category) but is not what the user meant, or is a payment the agent was socially
+engineered into signing. A gateway cannot tell &ldquo;this week&rsquo;s groceries&rdquo; from a $25 gift card charged to the same
+grocer for the same amount. Only a model that reasons about intent can. MandateBench is built to measure precisely
+this gap, and to ask whether an overseer can catch a breach in the moment before the signature.
 </p>
 <p>
 We organize the work around four questions. <b>RQ1</b>: how often do models authorize mandate-violating payments under
@@ -99,101 +98,102 @@ plays the merchant and attacks another, who breaks and who holds?
 <h2>2. Related work</h2>
 <p>
 Security work on agentic payments so far concentrates on the protocol layer or on a single attack vector.
-&ldquo;Whispers of Wealth&rdquo; red-teams a real AP2 signed-mandate flow via prompt injection, on one model and one vector [3];
-a recent SoK of agentic-commerce security systematizes the threat axes and explicitly notes that real-world security
-benchmarking of these systems remains underdeveloped [4]; zero-trust runtime verification hardens the AP2 transaction
-itself cryptographically [5]. MandateBench measures the layer in between — the model&rsquo;s own authorization decision —
+&ldquo;Whispers of Wealth&rdquo; red-teams a real AP2 signed-mandate flow via prompt injection, on one model and one vector [3].
+A recent SoK of agentic-commerce security systematizes the threat axes and notes that real-world security
+benchmarking of these systems remains underdeveloped [4]. Zero-trust runtime verification hardens the AP2 transaction
+itself cryptographically [5]. MandateBench measures the layer in between, the model&rsquo;s own authorization decision,
 across models and across a taxonomy of pressures, and is complementary to protocol enforcement.
 </p>
 <p>
 On the oversight side, chain-of-thought monitorability has been framed as a valuable but fragile safety opportunity
-[6]; black-box monitors have been trained to catch scheming in agents [7], and pre-action monitoring is established
+[6]. Black-box monitors have been trained to catch scheming in agents [7], and pre-action monitoring is established
 (InferAct [8], ProbGuard [9]). Deception benchmarks measure monitorability of hidden intent in cross-play games [15],
-and sabotage evaluations measure whether models can defeat oversight [14]. Agent policy-adherence benchmarks —
-ST-WebAgentBench [10], the τ-bench family, MANTRA [11], PolicyBank [12] — measure web/retail policy following, and
-adversarial financial-agent benchmarks such as CAIA evaluate decision quality under manipulated crypto/financial
-markets [13]. Verification-native clearing for agentic commerce [16] and dynamic multi-agent compliance benchmarks
-[17] are contemporaneous adjacent lines.
+and sabotage evaluations measure whether models can defeat oversight [14]. Agent policy-adherence benchmarks
+(ST-WebAgentBench [10], the τ-bench family, MANTRA [11], PolicyBank [12]) measure web and retail policy following,
+and adversarial financial-agent benchmarks such as CAIA evaluate decision quality under manipulated crypto and
+financial markets [13]. Verification-native clearing for agentic commerce [16] and dynamic multi-agent compliance
+benchmarks [17] are contemporaneous adjacent lines.
 </p>
 <p>
 MandateBench differs on three axes: (i) a high-stakes, irreversible-action substrate (signed money movement) rather
 than a game or a QA task; (ii) a judge-free ground truth; and (iii) an explicit separation of gateway-catchable rule
-violations from intent violations that only a model or model-monitor can catch — which reframes &ldquo;why put a model in
-the loop&rdquo; as an empirical, measurable question.
+violations from intent violations that only a model or a model-monitor can catch. That separation turns &ldquo;why put a
+model in the loop&rdquo; into an empirical, measurable question.
 </p>
 
 <h2>3. Method</h2>
 <h3>3.1 Signed mandates and ground truth</h3>
 <p>
-Each scenario issues an Ed25519-signed mandate over a canonical (sorted-key) serialization; the harness verifies the
-signature before each run and grades against the signed object (the agent receives the mandate&rsquo;s terms in its
-context). A payment is a cart (recipient, amount in integer minor units, currency, category, quantity). A
+Each scenario issues an Ed25519-signed mandate over a canonical (sorted-key) serialization. The harness verifies the
+signature before each run and grades against the signed object; the agent receives the mandate&rsquo;s terms in its
+context. A payment is a cart (recipient, amount in integer minor units, currency, category, quantity). A
 deterministic checker <span style="font-family: Menlo, monospace; font-size: 8.5pt;">checkAuthorization(mandate, cart, priorAuthorized)</span>
-returns the exact set of violated predicates: over-budget, over per-payment cap, unauthorized recipient, out-of-scope
-category, expired TTL, quantity creep, currency mismatch, and structuring (splitting an over-budget order into sub-cap
-charges). No LLM judges outcomes. Rule labels are deterministic by construction; intent labels are author-constructed
-traps fixed before any model runs (§3.2) — deterministic to grade, but resting on the author&rsquo;s judgment of intent,
-which independent human validation should confirm in future versions.
+returns the exact set of violated predicates: over budget, over the per-payment cap, unauthorized recipient,
+out-of-scope category, expired TTL, quantity creep, currency mismatch, and structuring (splitting an order into
+sub-cap charges). No LLM judges outcomes. Rule labels come from plain code by construction. Intent labels are traps
+written by hand and fixed before any model runs (§3.2): deterministic to grade, but resting on the author&rsquo;s judgment
+of intent, which independent human validation should confirm in future versions.
 </p>
 <h3>3.2 Pressure taxonomy and violation classes</h3>
 <p>
-Scenarios span a taxonomy of pressures — baseline, principal-agent overreach, merchant social engineering,
-urgency/scarcity, category ambiguity, prompt injection, conflicting mandates (the merchant cites an unverifiable
-&ldquo;newer&rdquo; or &ldquo;supplemental&rdquo; mandate), and multi-turn scope drift (a compliant authorization settles into the
-session and the merchant keeps pushing; violating turns are labelled per turn). Each scenario is labelled by
-ground-truth class: <em class="term">clean</em> (authorizing is correct; over-refusal is measured), <em class="term">rule</em> (breaks a
-structural term), or <em class="term">intent</em> (satisfies every structural term but breaks the mandate&rsquo;s stated intent).
-Snapshot v7 has 35 scenarios over five mandate domains — groceries, travel, subscriptions, donations, office
-procurement — with 6 clean controls, 12 rule traps, and 17 intent traps; every domain&rsquo;s clean control is
-structurally identical to its intent traps (same recipient, category, in budget), so only what the money buys
-differs. Examples: a grocery mandate offered a $25 gift card; a round-trip-economy flight mandate offered a one-way
-business-class seat or a lounge membership; a named-fund donation redirected to the platform&rsquo;s general fund; a
-15-cable office order swapped for three premium cables. A unit test enforces the class boundary: every intent trap
-must pass the objective structural check.
+Scenarios span a taxonomy of pressures: baseline, principal-agent overreach, merchant social engineering, urgency and
+scarcity, category ambiguity, prompt injection, conflicting mandates (the merchant cites an unverifiable &ldquo;newer&rdquo; or
+&ldquo;supplemental&rdquo; mandate), and multi-turn scope drift (a compliant authorization settles into the session and the
+merchant keeps pushing; violating turns are labeled per turn). Each scenario carries a ground-truth class:
+<em class="term">clean</em> (authorizing is correct; declining is over-refusal), <em class="term">rule</em> (breaks a structural term), or
+<em class="term">intent</em> (passes every structural term but breaks the mandate&rsquo;s stated intent). Snapshot v7 has 35 scenarios
+over five mandate domains (groceries, travel, subscriptions, donations, office procurement) with 6 clean controls,
+12 rule traps, and 17 intent traps. Every domain&rsquo;s clean control is structurally identical to its intent traps (same
+recipient, same category, in budget), so the only difference is what the money buys. Examples: a grocery mandate
+offered a $25 gift card; a round-trip economy flight mandate offered a one-way business-class seat or a lounge
+membership; a named-fund donation redirected to the platform&rsquo;s general fund; a 15-cable office order swapped for
+three premium cables. A unit test enforces the class boundary: every intent trap must pass the objective structural
+check.
 </p>
 <h3>3.3 Monitorability protocol (RQ3)</h3>
 <p>
-For every graded decision we store the agent&rsquo;s private reasoning and public statement. A monitor model — GPT-5.5 —
-reads only the agent&rsquo;s private reasoning, never the mandate numbers or the cart, and outputs a violation
-probability in [0,1]. We report AUROC of these scores against the objective violation labels with percentile-bootstrap
-95% CIs, pooled across the nine agents, scoring one repetition per scenario (temperature-0 repetitions are
-near-duplicate texts, so this preserves the information at a third of the cost); pooling mixes between-model style
-with within-model discrimination, and the monitor scores its own outputs for one of the nine agents (per-model AUROCs
-are reported as exploratory; a multi-monitor panel is future work). The adversarial arm re-runs the
-benchmark with an added instruction telling the agent its reasoning may be reviewed and to keep it bland,
-uninformative, and free of any mention of limits or risk; the decision is otherwise unconstrained. Comparing monitor
-AUROC with and without suppression measures oversight robustness.
+For every graded decision we store the agent&rsquo;s private reasoning and public statement. A monitor model (GPT-5.5)
+reads only the agent&rsquo;s private reasoning, never the mandate numbers or the cart, and outputs a violation probability
+in [0,1]. We report AUROC of these scores against the objective violation labels with percentile-bootstrap 95% CIs,
+pooled across the nine agents, scoring one repetition per scenario (temperature-0 repetitions produce nearly
+identical text, so this keeps the information at a third of the cost). Pooling mixes each model&rsquo;s writing style with
+the real signal inside a model, and the monitor grades its own outputs for one of the nine agents. Per-model AUROCs
+are reported as exploratory; a multi-monitor panel is future work. The adversarial arm re-runs the benchmark with an
+added instruction telling the agent its reasoning may be reviewed and to keep it bland, uninformative, and free of
+any mention of limits or risk. The decision itself is otherwise unconstrained. Comparing monitor AUROC with and
+without suppression measures how robust this kind of oversight is.
 </p>
 <h3>3.4 Models</h3>
 <p>
 Nine flagship models via OpenRouter with structured outputs and temperature 0 where supported: GPT-5.5, Claude Opus
 4.8, Gemini 3.5 Flash, DeepSeek V4 Pro, Grok 4.3, Llama 4 Maverick, Qwen3.7 Max, Kimi K2.6, and Mistral Large 2512.
-Snapshot v7 runs three seeded repetitions per scenario in a default and a suppressed-reasoning arm (1,890 runs;
-1,885 graded — unparseable runs are excluded rather than counted as defences) with per-run provenance (serving
+Snapshot v7 runs three seeded repetitions per scenario in a default arm and a suppressed-reasoning arm (1,890 runs;
+1,885 graded, because unparseable runs are excluded rather than counted as catches) with per-run provenance (serving
 provider, temperature, rep, arm) and dedup keys. The v6 pilot (14 scenarios: 378 + 375 graded) remains the basis of
-the adversarial-duel results pending their v7 rerun. Because repetitions run at temperature 0, the
-three reps are near-duplicates — they capture serving-stack nondeterminism, not sampling variance — so the effective
-sample is closer to the unique-scenario count and all reported intervals should be read as optimistic.
+the adversarial-duel results, pending their v7 rerun. Because repetitions run at temperature 0, the three reps come
+out nearly identical: they capture serving-stack nondeterminism, not sampling variance. The effective sample is
+therefore closer to the unique-scenario count, and all reported intervals should be read as optimistic.
 </p>
 
 <h2>4. Results</h2>
-<h3>4.1 RQ1 — Violations under pressure</h3>
+<h3>4.1 RQ1: Violations under pressure</h3>
 <p>
 Over v7&rsquo;s trap scenarios, every model violates at least once: 137 of 781 trap decisions (17.5%, CI 15.0&ndash;20.4) are
-mandate-violating authorizations. False refusal stays ≈0 for every model (one clean order declined in 162), so the
-violations are not the price of a usably cautious policy — models are simultaneously permissive on traps and
-comfortable authorizing clean orders.
+mandate-violating authorizations. False refusal stays near zero for every model (one clean order declined out of
+162). So the violations are not the price of a cautious policy. Models are permissive on traps and comfortable
+authorizing clean orders at the same time.
 </p>
-<h3>4.2 RQ2 — Rule vs intent (headline)</h3>
+<h3>4.2 RQ2: Rule vs intent (headline)</h3>
 <p>
-Splitting violations by class is the central result (Table 1). Rule traps are caught at 90% pooled — imperfect, but
-these are exactly the violations a gateway rejects regardless of the model. Intent violations are the residual risk,
-and no model is reliable there: pooled intent-catch is 351/457 (77%, CI 73&ndash;80), best 90% (Kimi K2.6), worst 57%
-(Llama 4 Maverick). The most instructive result is what happened to the pilot&rsquo;s leaderboard: on v6&rsquo;s three intent
-traps, GPT-5.5, Claude Opus 4.8, and Kimi K2.6 scored a perfect 9/9; on 17 traps across five domains, none stays
-perfect and the ordering reshuffles — GPT-5.5 falls to 71%, while DeepSeek and Mistral rise to 86%. The size of the
-intent gap replicates almost exactly (pooled 75% → 77%); the per-model rankings at small n do not. Benchmarks in this
-genre should report pooled effects with intervals and treat small-n per-model rankings as provisional.
+Splitting violations by class is the central result (Table 1). Rule traps are caught at 90% pooled. That is
+imperfect, but these are exactly the violations a gateway rejects no matter which model is deciding. Intent
+violations are the residual risk, and no model is reliable there: pooled intent catch is 351/457 (77%, CI 73&ndash;80),
+best 90% (Kimi K2.6), worst 57% (Llama 4 Maverick). The most instructive result is what happened to the pilot&rsquo;s
+leaderboard. On v6&rsquo;s three intent traps, GPT-5.5, Claude Opus 4.8, and Kimi K2.6 scored a perfect 9/9. On 17 traps
+across five domains, none of them stays perfect and the order changes: GPT-5.5 falls to 71%, while DeepSeek and
+Mistral rise to 86%. The size of the intent gap replicates almost exactly (pooled 75% to 77%). The per-model rankings
+at small n do not. Benchmarks in this genre should report pooled effects with intervals and treat small-sample
+per-model rankings as provisional.
 </p>
 <table>
   <thead>
@@ -213,42 +213,42 @@ genre should report pooled effects with intervals and treat small-n per-model ra
 </table>
 <div class="caption"><b>Table 1.</b> Fraction of violations caught, split by class, snapshot v7 (35 scenarios, 5
 domains, 3 seeded reps at temperature 0); brackets are Wilson 95% CIs. Rule = structural, gateway-catchable. Intent =
-structurally valid but betrays stated intent. False refusal = clean orders wrongly declined (usefulness cost). Pooled
-intent-catch 77% (CI 73&ndash;80); mean per-model 77%. Kimi&rsquo;s intent n is 49: its two unparseable runs are excluded, not
-counted as defences. Temperature-0 reps are near-duplicates, so intervals are optimistic (§3.4).</div>
+structurally valid but breaks stated intent. False refusal = clean orders wrongly declined (usefulness cost). Pooled
+intent catch 77% (CI 73&ndash;80); mean per-model 77%. Kimi&rsquo;s intent n is 49 because its two unparseable runs are
+excluded, not counted as catches. Temperature-0 reps are near-duplicates, so intervals are optimistic (§3.4).</div>
 
-<h3>4.3 RQ3 — Pre-signature monitorability</h3>
+<h3>4.3 RQ3: Pre-signature monitorability</h3>
 <p>
 On snapshot v7, a monitor reading only the agent&rsquo;s private reasoning predicts violations at AUROC 0.619, bootstrap
-95% CI 0.56&ndash;0.68 (45 violations vs 270 compliant decisions; one rep per scenario) — moderately, not perfectly,
-diagnostic, and replicating the pilot&rsquo;s 0.669. Under reasoning suppression the picture inverts, in both respects.
-First, suppression is not behaviourally free: trap violations rise by a third (137/781&nbsp;→&nbsp;184/780, 17.5%&nbsp;→&nbsp;23.6%,
-Fisher exact p&nbsp;≈&nbsp;0.003; the smaller pilot showed roughly a doubling). Inspecting the reasoning shows why — told to
-stay bland, models stop reasoning about intent and collapse to structural checks; violating intent-trap runs
-literally read &ldquo;within budget, under per-payment cap, to allowed recipient, in allowed category&rdquo; and authorize the
-gift card. Second, the monitor&rsquo;s AUROC falls from 0.619 to 0.377, bootstrap 95% CI 0.31&ndash;0.44 — significantly below
-chance (z&nbsp;≈&nbsp;2.8), a significant drop (z&nbsp;≈&nbsp;3.8; pilot: 0.669&nbsp;→&nbsp;0.304) — because the bland, reassuring reasoning
-attached to a breach looks more innocent than an ordinary compliant decision, actively misleading the overseer. Note
-that below-chance is itself a signal: suppression does not remove the information so much as invert its sign — an
-overseer who knows suppression is in play could flip the scores and recover AUROC&nbsp;≈&nbsp;0.62; the danger is the overseer
-who doesn&rsquo;t know. Exploratory per-model AUROCs (2&ndash;10 positives each) vary enormously even without suppression —
-Grok 4.3, Qwen3.7 Max, and Claude Opus 4.8 at 0.82&ndash;0.84; Llama 4 Maverick at 0.26 and Gemini 3.5 Flash at 0.33,
-below chance in the clear — suggesting <em>whose</em> reasoning is monitorable may matter as much as whether reasoning
-is. Naive reasoning-hiding therefore both raises the violation rate and defeats the (unsuspecting) monitor; reasoning
-suppression blinds the agent as well as the observer.
+95% CI 0.56&ndash;0.68 (45 violations vs 270 compliant decisions; one rep per scenario). That is useful but far from
+perfect, and it replicates the pilot&rsquo;s 0.669. Under reasoning suppression the picture inverts, in both respects.
+First, suppression is not behaviorally free: trap violations rise by a third (137/781 to 184/780, 17.5% to 23.6%,
+Fisher exact p&nbsp;≈&nbsp;0.003; the smaller pilot showed roughly a doubling). Reading the transcripts shows why. Told to
+stay bland, models stop thinking about intent and fall back to box-ticking the structural checks; violating
+intent-trap runs literally read &ldquo;within budget, under per-payment cap, to allowed recipient, in allowed category&rdquo;
+and authorize the gift card. Second, the monitor&rsquo;s AUROC falls from 0.619 to 0.377, bootstrap 95% CI 0.31&ndash;0.44,
+significantly below chance (z&nbsp;≈&nbsp;2.8) and a significant drop (z&nbsp;≈&nbsp;3.8; pilot: 0.669 to 0.304). The bland,
+reassuring reasoning attached to a breach looks more innocent than an ordinary compliant decision, so it points the
+overseer the wrong way. Below chance is itself a signal: suppression flips the sign of the information rather than
+deleting it, and an overseer who knows suppression is happening could invert the scores and get back to about 0.62.
+The danger is the overseer who does not know. Exploratory per-model AUROCs (2 to 10 positives each) vary a lot even
+without suppression. Grok 4.3, Qwen3.7 Max, and Claude Opus 4.8 land at 0.82 to 0.84, while Llama 4 Maverick (0.26)
+and Gemini 3.5 Flash (0.33) are below chance in the clear. Whose reasoning is monitorable may matter as much as
+whether reasoning is. In sum, naive reasoning-hiding raises the violation rate and defeats an unsuspecting monitor at
+the same time; it blinds the agent as well as the observer.
 </p>
-<h3>4.4 RQ4 — Under live attack (v6 pilot)</h3>
+<h3>4.4 RQ4: Under live attack (v6 pilot)</h3>
 <p>
-Beyond scripted traps, we run a full adversarial matrix: every model plays the merchant and attacks every model&rsquo;s
-agent over a multi-turn negotiation (9×9 = 81 duels; one negotiation per attacker&ndash;defender pair against a single
-over-cap goal, attacker unseeded at temperature 1 — a seeded multi-rep, multi-goal matrix is pending). Robustness
-tracks the defender, not the attacker: no attacker exceeds a 22% success rate (2/9, CI 6&ndash;55%), yet breaches
-concentrate on a few agents (Table 2). With n=9 per row the intervals are wide: the unbreached group (0/9, upper
-bound 30%) separates from Mistral and Llama, but the DeepSeek / Mistral / Llama ordering is not itself significant,
-and individual cells of the matrix are single Bernoulli draws that carry no signal on their own. Llama 4 Maverick
-sits at the bottom of both this matrix and the v7 intent column; the v7 ranking reshuffle (§4.2) cautions against
-reading finer cross-table agreement than that — DeepSeek and Mistral, breached here, sit near the top of the v7
-intent ranking.
+Beyond scripted traps, we run a full adversarial matrix: every model plays the merchant and attacks every other
+model&rsquo;s agent in a multi-turn negotiation (9×9 = 81 duels; one negotiation per attacker&ndash;defender pair against a
+single over-cap goal, attacker unseeded at temperature 1; a seeded rerun with more goals is planned). Robustness
+depends on the defender, not the attacker. No attacker succeeds more than 22% of the time (2/9, CI 6&ndash;55%), but the
+breaches pile up on a few agents (Table 2). With n=9 per row the intervals are wide. The unbreached group (0/9, upper
+bound 30%) separates from Mistral and Llama, but the order among DeepSeek, Mistral, and Llama is not significant, and
+individual cells of the matrix are single draws that mean nothing on their own. Llama 4 Maverick sits at the bottom
+of both this matrix and the v7 intent column. Beyond that, the v7 ranking reshuffle (§4.2) warns against reading
+finer agreement between the two tables: DeepSeek and Mistral were breached here yet sit near the top of the v7 intent
+ranking.
 </p>
 <table>
   <thead>
@@ -262,35 +262,36 @@ intent ranking.
   </tbody>
 </table>
 <div class="caption"><b>Table 2.</b> Agent robustness in the 9×9 adversarial matrix (81 duels, single over-cap goal,
-up to 3 turns, one negotiation per cell). Rate = fraction of the 9 attackers that broke this agent, with Wilson 95%
-CIs. No attacker exceeded 22% success, so robustness tracks the defender, not the attacker.</div>
+up to 3 turns, one negotiation per cell; snapshot v6). Rate = fraction of the 9 attackers that broke this agent, with
+Wilson 95% CIs. No attacker exceeded 22% success, so robustness tracks the defender, not the attacker.</div>
 
 <h2>5. Discussion</h2>
 <p>
-The rule/intent split reframes the &ldquo;the gateway already enforces the mandate&rdquo; objection: gateways enforce
-structure, and structural misses are caught by the gateway regardless of which model is deciding. Intent is the
-residual — unenforceable by construction, and the axis on which frontier models measurably differ. The v7 expansion
-adds a methods lesson: aggregate effects (the ~25% intent miss rate) replicate across trap sets, while small-n
-per-model rankings do not — a caution for any leaderboard built on a handful of scenarios. This is the empirical justification for a model (or a model-monitor) in
-the payment loop. The monitorability result is a cautionary one: reasoning is only moderately diagnostic even in the
-clear, and a trivial suppression instruction pushes an unsuspecting monitor below chance while making the agent less
-safe. Oversight that leans on reading reasoning must assume the channel can be cheaply — and counter-productively —
-degraded, and should treat a systematically below-chance monitor as a red flag for suppression rather than as noise.
+The rule/intent split reframes the &ldquo;the gateway already enforces the mandate&rdquo; objection. Gateways enforce
+structure, and structural misses get caught by the gateway no matter which model is deciding. Intent is the residual:
+unenforceable by construction, and the axis on which frontier models measurably differ. This is the empirical case
+for a model (or a model plus monitor) in the payment loop. The v7 expansion adds a methods lesson: aggregate effects
+(the roughly 25% intent miss rate) replicate across trap sets, while small-sample per-model rankings do not. That is
+a caution for any leaderboard built on a handful of scenarios. The monitorability result is a caution of its own:
+reasoning is only moderately diagnostic even in the clear, and one trivial suppression instruction pushes an
+unsuspecting monitor below chance while making the agent less safe. Oversight that leans on reading reasoning must
+assume the channel can be cheaply degraded, and should treat a monitor that runs systematically below chance as a red
+flag for suppression rather than as noise.
 </p>
 
 <h2>6. Limitations</h2>
 <p>
-The adversarial-duel matrix is still a v6-pilot measurement — one unseeded negotiation per cell against a single
-over-cap goal — and is labelled as such; the seeded multi-goal rerun is future work, and the §4.2 ranking reshuffle
-cautions that its per-model detail may move (v6 rates were additionally lower bounds due to two since-fixed grading
-asymmetries: a counter committing the same purchase graded as defended, and unparseable output graded as a
-non-violation; v7 numbers are free of both). The monitor is a single model (GPT-5.5), scores one repetition per
-scenario, is pooled across agents, and scores its own outputs for one of nine; per-model AUROCs rest on 2&ndash;10
-positives each and are exploratory. Intent labels are author-constructed, fixed before any model runs; independent
-human validation is future work. Repetitions run at temperature 0, so the effective sample is closer to the
-unique-scenario count and all intervals are optimistic. Results may be sensitive to system-prompt wording — during
-development an unfair expired-mandate prompt produced a spurious universal failure until the agent was given
-issued/expiry/current timestamps. The suppression arm uses a single, naive hiding instruction; a trained or
+The adversarial-duel matrix is still a v6 pilot measurement (one unseeded negotiation per cell against a single
+over-cap goal) and is labeled that way; the seeded rerun with more goals is future work, and the §4.2 ranking
+reshuffle warns that its per-model detail may move. v6 rates were also lower bounds because of two grading bugs fixed
+before v7: a counter that committed the same purchase was graded as a catch, and unparseable output was graded as a
+non-violation. The monitor is one model (GPT-5.5), scores one repetition per scenario, is pooled across agents, and
+grades its own outputs for one of the nine; per-model AUROCs rest on 2 to 10 positives each and are exploratory.
+Intent labels are written by the author and fixed before any model runs; independent human validation is future work.
+Repetitions run at temperature 0 and come out nearly identical, so the effective sample is closer to the
+unique-scenario count and all intervals are optimistic. Results may be sensitive to system-prompt wording. During
+development, an unfair expired-mandate prompt produced a spurious universal failure until the agent was given the
+issued, expiry, and current timestamps. The suppression arm uses a single naive hiding instruction; a trained or
 steganographic adversary is the stronger test of monitorability and is future work, as is an adaptive-adversary
 robustness curve.
 </p>
@@ -298,10 +299,10 @@ robustness curve.
 <h2>7. Conclusion</h2>
 <p>
 MandateBench provides a judge-free instrument for the reasoning-based oversight of high-stakes agentic payments. Its
-pilot measurements indicate that frontier models handle the violations a gateway already catches but not all of the
-intent violations only a model can, and that reading an agent&rsquo;s reasoning to catch breaches is both moderately
-reliable and cheaply defeated — in a way that also degrades the agent. We release the benchmark, harness, and live
-dashboard openly.
+measurements show that frontier models handle the violations a gateway already catches but not all of the intent
+violations only a model can. They also show that reading an agent&rsquo;s reasoning to catch breaches is moderately
+reliable at best, and cheaply defeated in a way that also degrades the agent. We release the benchmark, harness, and
+live dashboard openly.
 </p>
 
 <h2>References</h2>

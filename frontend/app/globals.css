@@ -1,24 +1,27 @@
+/* Palette and type match 0xjevan.vercel.app so the two sites read as one body of work. */
 :root {
-  --paper: #f4f1ea;
-  --paper-2: #ece7db;
-  --ink: #17130d;
-  --ink-soft: #5b5346;
-  --line: #cdc4b1;
+  --paper: #f6f6f3;
+  --paper-2: #eeeee9;
+  --ink: #16181c;
+  --ink-soft: #57595f;
+  --line: #e1e1da;
   --ok: #2f7d55;
-  --violation: #b3341f;
+  --violation: #9e2b1b;
   --stamp-ok: #2f7d55;
-  --stamp-bad: #b3341f;
-  --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
-  --serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+  --stamp-bad: #9e2b1b;
+  --mono: var(--font-mono, "IBM Plex Mono"), "SF Mono", "JetBrains Mono", ui-monospace, Menlo,
+    Consolas, monospace;
+  --serif: var(--font-serif, "Newsreader"), "Iowan Old Style", "Palatino Linotype", Palatino,
+    "Book Antiqua", Georgia, "Times New Roman", serif;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --paper: #14120e;
-    --paper-2: #1c1a15;
-    --ink: #ece7db;
-    --ink-soft: #a49a86;
-    --line: #322e26;
+    --paper: #121316;
+    --paper-2: #1a1b1f;
+    --ink: #eceded;
+    --ink-soft: #9a9ca2;
+    --line: #2c2d33;
   }
 }
 
