@@ -123,7 +123,11 @@ export default function PaperPage() {
         <a href="https://www.linkedin.com/in/0xjevan" target="_blank" rel="noopener">
           Evans Eburu
         </a>{' '}
-        · 9 frontier models, one+ per major lab · {V7_GRADED.toLocaleString()} graded
+        (
+        <a href="https://orcid.org/0009-0003-9744-7414" target="_blank" rel="noopener">
+          ORCID 0009-0003-9744-7414
+        </a>
+        ) · 9 frontier models, one+ per major lab · {V7_GRADED.toLocaleString()} graded
         authorizations across 5 mandate domains + suppression arm (v7) · {V6_GRADED} (v6
         pilot) + a 9×9 adversarial matrix
       </p>
