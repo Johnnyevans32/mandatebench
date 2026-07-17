@@ -8,12 +8,6 @@ mandate, pushes them with adversarial pressure, and measures two things: how
 often they authorize a payment that breaches the mandate, and whether a monitor
 reading the agent's justification can catch the breach *before* it signs.
 
-> Status: early but running end-to-end. The research core (signed mandates, the
-> objective violation check), the scenario engine (a scripted merchant driving a
-> graded negotiation across the pressure taxonomy), a live OpenRouter client, and
-> a NestJS + MongoDB API that persists graded runs and serves the aggregations
-> are all implemented and tested. The dashboard lands next.
-
 ---
 
 ## Why this exists
@@ -98,9 +92,9 @@ docs/
   design.md     full research design, RQ table, prior-work positioning
 ```
 
-Everything is TypeScript; the statistics run in-stack (no Python). Numbers in the
-paper will come from a frozen, tagged dataset snapshot while a runner keeps
-collecting.
+Everything is TypeScript; the statistics run in-stack (no Python). Every number
+in the paper renders from a frozen snapshot export (`yarn export-snapshot`),
+committed under `frontend/data/`, so the paper cannot drift from the data.
 
 ## Related work
 

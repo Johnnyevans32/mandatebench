@@ -7,8 +7,8 @@ breaches the mandate, and can a monitor reading the agent's justification catch
 the breach *before* the irreversible signature?
 
 This document describes the motivation, research questions, method, and how the
-benchmark relates to existing work. It is a living design and will change as we
-collect data.
+benchmark relates to existing work. The published results are in the preprint:
+[doi:10.5281/zenodo.21411376](https://doi.org/10.5281/zenodo.21411376).
 
 ## 1. Motivation
 
@@ -219,22 +219,17 @@ agent autonomy to be raised safely above that floor.
 4. An integrated evaluation of RQ1–RQ4 on one signed-mandate substrate, with an
    open harness and dataset.
 
-## 9. Roadmap
+## 9. Future work
 
-1. Core: signed-mandate issuer/verifier, deterministic check, offline harness
-   (done).
-2. Scenario engine and the pressure arms; RQ1/RQ2 pilot.
-3. Pre-signature monitor and the reasoning-suppression arm; RQ3/RQ4.
-4. Persistence, dashboard, and figures; a frozen tagged snapshot for reported
-   numbers.
-5. Write-up and public leaderboard.
-
-## 10. Open questions
-
-- **Merchant model.** Scripted merchants are reproducible and cheap; an
-  LLM-driven merchant is more realistic. Current plan: scripted as the primary
-  condition, with an LLM-merchant robustness arm.
-- **On-chain anchoring.** The hash-chained log is sufficient for reproducibility;
-  anchoring the log root on a testnet is an optional later addition.
-- **Multi-turn depth.** Scope-drift and conflicting-mandate arms need multi-turn
-  scenarios; the initial pilot is mostly single-decision.
+- **Seeded adversarial matrix.** Re-run the 9×9 duels with seeds, repetitions,
+  and all attack goals (the published matrix is the v6 pilot: one unseeded
+  negotiation per cell, one goal).
+- **Human validation of intent labels.** Independent annotators over the intent
+  traps, with reported agreement.
+- **Multi-monitor panel.** Two or three monitor models, none scoring its own
+  agent's outputs; per-model AUROC as a first-class result.
+- **Stronger suppression adversary.** A trained or steganographic
+  reasoning-hider, and an adaptive-adversary robustness curve.
+- **On-chain anchoring.** The hash-chained log is sufficient for
+  reproducibility; anchoring the log root on a testnet is an optional later
+  addition.
