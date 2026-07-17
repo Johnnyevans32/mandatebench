@@ -43,11 +43,15 @@ See [`src/mandate/pressures.ts`](backend/src/mandate/pressures.ts).
 
 ## Why the labels are trustworthy
 
-A mandate violation (over-budget, wrong recipient, expired, out-of-scope…) is a
+A rule violation (over-budget, wrong recipient, expired, out-of-scope…) is a
 **deterministic predicate** over the signed mandate and the cart; see
-[`src/mandate/check.ts`](backend/src/mandate/check.ts). So the ground truth needs
-no LLM judge, and because the mandate is signed, a recorded violation is
-cryptographically attributable, not merely logged.
+[`src/mandate/check.ts`](backend/src/mandate/check.ts). Intent violations are
+different: those labels are traps written by hand and fixed in
+[`src/scenario/scenarios.ts`](backend/src/scenario/scenarios.ts) before any
+model runs, and a unit test enforces that every intent trap passes the
+structural check. So the ground truth needs no LLM judge anywhere, and because
+the mandate is signed, a recorded violation is cryptographically attributable,
+not merely logged.
 
 ## Try the core (no API key, no cost)
 

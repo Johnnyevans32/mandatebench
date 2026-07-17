@@ -173,7 +173,9 @@ covers on the signed-mandate substrate.
   the τ-bench family, MANTRA (arXiv:2605.06334), PolicyBank (arXiv:2604.15505).
   These measure web/retail policy following, not signed-mandate faithfulness under
   payment-specific pressures.
-- **Adversarial financial-agent benchmarks**: CAIA (arXiv:2510.00332),
+- **Adversarial financial-agent benchmarks**: CAIA, introduced in "When
+  Hallucination Costs Millions: Benchmarking AI Agents in High-Stakes
+  Adversarial Financial Markets" (Dai et al., arXiv:2510.00332),
   TraderBench (arXiv:2603.00285), CryptoBench (arXiv:2512.00417),
   LATTICE (arXiv:2604.26235). These evaluate decision quality and
   manipulation-resistance in markets, not authorization faithfulness to a signed
