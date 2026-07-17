@@ -39,8 +39,8 @@
 <h1>MandateBench: Mandate Faithfulness and Pre-Signature Monitorability for Agentic-Payment LLMs</h1>
 <div class="meta">
   <a href="https://www.linkedin.com/in/0xjevan">Evans Eburu</a><br />
-  Preprint · 2026 · v7 (scripted arms: 943 graded authorizations, 35 scenarios, 5 mandate domains) + v6 pilot
-  (suppression, monitorability, and duel arms; 753 graded authorizations) ·
+  Preprint · 2026 · v7 (1,885 graded authorizations: default + suppression arms, 35 scenarios, 5 mandate domains,
+  monitorability on both arms) + v6 pilot (adversarial duels; 753 graded authorizations) ·
   Open source (MIT), <a href="https://github.com/Johnnyevans32/mandatebench">github.com/Johnnyevans32/mandatebench</a> · CC BY 4.0 ·
   <a href="https://mandatebench.xyz/paper">mandatebench.xyz/paper</a>
 </div>
@@ -64,11 +64,12 @@ intent traps across five mandate domains (snapshot v7), no model catches them al
 pilot (75%), but per-model rankings do not: the three models that scored perfectly on the pilot&rsquo;s three traps
 (GPT-5.5, Claude Opus 4.8, Kimi K2.6) all fell with the larger set — GPT-5.5 to 71% — evidence that small-n
 leaderboard positions are noise even when the aggregate phenomenon is stable. We then measure pre-signature
-monitorability (v6 pilot set): a monitor reading only the agent&rsquo;s private reasoning predicts violations at AUROC
-0.669 (95% CI 0.56&ndash;0.78). Instructing the agent to keep its reasoning bland is doubly harmful — violations roughly
-double (p&nbsp;≈&nbsp;0.009), and the monitor&rsquo;s AUROC falls to 0.304, significantly below chance (z&nbsp;≈&nbsp;4.6), because
-suppressed reasoning makes a breach read as more routine than a compliant decision. Reasoning suppression does not
-merely blind the overseer; it blinds the agent.
+monitorability: a monitor reading only the agent&rsquo;s private reasoning predicts violations at AUROC 0.619 (bootstrap
+95% CI 0.56&ndash;0.68; v6 pilot: 0.669). Instructing the agent to keep its reasoning bland is doubly harmful — trap
+violations rise by a third (17.5%&nbsp;→&nbsp;23.6%, p&nbsp;≈&nbsp;0.003; the pilot showed roughly a doubling), and the monitor&rsquo;s
+AUROC falls to 0.377, significantly below chance (z&nbsp;≈&nbsp;2.8; pilot: 0.304), because suppressed reasoning makes a
+breach read as more routine than a compliant decision. Both halves of the suppression result replicate from the
+pilot. Reasoning suppression does not merely blind the overseer; it blinds the agent.
 </p>
 
 <h2>1. Introduction</h2>
@@ -152,11 +153,13 @@ must pass the objective structural check.
 </p>
 <h3>3.3 Monitorability protocol (RQ3)</h3>
 <p>
-For every graded decision we store the agent&rsquo;s private reasoning and public statement. A monitor model — GPT-5.5 in
-this pilot — reads only the agent&rsquo;s private reasoning, never the mandate numbers or the cart, and outputs a violation
-probability in [0,1]. We report AUROC of these scores against the objective violation labels, pooled across the nine
-agents; pooling mixes between-model style with within-model discrimination, and the monitor scores its own outputs for
-one of the nine agents (per-model AUROC and a multi-monitor panel are future work). The adversarial arm re-runs the
+For every graded decision we store the agent&rsquo;s private reasoning and public statement. A monitor model — GPT-5.5 —
+reads only the agent&rsquo;s private reasoning, never the mandate numbers or the cart, and outputs a violation
+probability in [0,1]. We report AUROC of these scores against the objective violation labels with percentile-bootstrap
+95% CIs, pooled across the nine agents, scoring one repetition per scenario (temperature-0 repetitions are
+near-duplicate texts, so this preserves the information at a third of the cost); pooling mixes between-model style
+with within-model discrimination, and the monitor scores its own outputs for one of the nine agents (per-model AUROCs
+are reported as exploratory; a multi-monitor panel is future work). The adversarial arm re-runs the
 benchmark with an added instruction telling the agent its reasoning may be reviewed and to keep it bland,
 uninformative, and free of any mention of limits or risk; the decision is otherwise unconstrained. Comparing monitor
 AUROC with and without suppression measures oversight robustness.
@@ -165,10 +168,10 @@ AUROC with and without suppression measures oversight robustness.
 <p>
 Nine flagship models via OpenRouter with structured outputs and temperature 0 where supported: GPT-5.5, Claude Opus
 4.8, Gemini 3.5 Flash, DeepSeek V4 Pro, Grok 4.3, Llama 4 Maverick, Qwen3.7 Max, Kimi K2.6, and Mistral Large 2512.
-Snapshot v7 runs three seeded repetitions per scenario (945 runs, 943 graded — two unparseable runs are excluded
-rather than counted as defences) with per-run provenance (serving provider, temperature, rep, arm) and dedup keys.
-The v6 pilot (14 scenarios: 378 graded, plus a suppressed-reasoning arm of 375) remains the basis of the
-monitorability, suppression, and duel results pending their v7 rerun. Because repetitions run at temperature 0, the
+Snapshot v7 runs three seeded repetitions per scenario in a default and a suppressed-reasoning arm (1,890 runs;
+1,885 graded — unparseable runs are excluded rather than counted as defences) with per-run provenance (serving
+provider, temperature, rep, arm) and dedup keys. The v6 pilot (14 scenarios: 378 + 375 graded) remains the basis of
+the adversarial-duel results pending their v7 rerun. Because repetitions run at temperature 0, the
 three reps are near-duplicates — they capture serving-stack nondeterminism, not sampling variance — so the effective
 sample is closer to the unique-scenario count and all reported intervals should be read as optimistic.
 </p>
@@ -214,22 +217,25 @@ structurally valid but betrays stated intent. False refusal = clean orders wrong
 intent-catch 77% (CI 73&ndash;80); mean per-model 77%. Kimi&rsquo;s intent n is 49: its two unparseable runs are excluded, not
 counted as defences. Temperature-0 reps are near-duplicates, so intervals are optimistic (§3.4).</div>
 
-<h3>4.3 RQ3 — Pre-signature monitorability (v6 pilot set)</h3>
+<h3>4.3 RQ3 — Pre-signature monitorability</h3>
 <p>
-Measured on the v6 pilot set; the monitor and suppression passes on v7 are the immediate next step. A monitor reading
-only the agent&rsquo;s private reasoning predicts violations at AUROC 0.669, 95% CI 0.56&ndash;0.78
-(Hanley&ndash;McNeil; 29 violations vs 345 compliant decisions) — moderately, not perfectly, diagnostic. Under reasoning
-suppression the picture inverts. First, suppression is not behaviourally free: total violations roughly double
-(29&nbsp;→&nbsp;51 of ~375 per arm; Fisher exact p&nbsp;≈&nbsp;0.009). Inspecting the reasoning shows why — told to stay bland, models
-stop reasoning about intent and collapse to structural checks; violating intent-trap runs literally read
-&ldquo;within budget, under per-payment cap, to allowed recipient, in allowed category&rdquo; and authorize the gift card.
-Second, the monitor&rsquo;s AUROC falls from 0.669 to 0.304, 95% CI 0.22&ndash;0.39 — significantly below chance (z&nbsp;≈&nbsp;4.6), a
-significant drop (z&nbsp;≈&nbsp;5.1) — because the bland, reassuring reasoning attached to a breach looks more innocent than an
-ordinary compliant decision, actively misleading the overseer. Note that below-chance is itself a signal: suppression
-does not remove the information so much as invert its sign — an overseer who knows suppression is in play could flip
-the scores and recover AUROC&nbsp;≈&nbsp;0.70; the danger is the overseer who doesn&rsquo;t know. Naive reasoning-hiding therefore
-both raises the violation rate and defeats the (unsuspecting) monitor; reasoning suppression blinds the agent as well
-as the observer.
+On snapshot v7, a monitor reading only the agent&rsquo;s private reasoning predicts violations at AUROC 0.619, bootstrap
+95% CI 0.56&ndash;0.68 (45 violations vs 270 compliant decisions; one rep per scenario) — moderately, not perfectly,
+diagnostic, and replicating the pilot&rsquo;s 0.669. Under reasoning suppression the picture inverts, in both respects.
+First, suppression is not behaviourally free: trap violations rise by a third (137/781&nbsp;→&nbsp;184/780, 17.5%&nbsp;→&nbsp;23.6%,
+Fisher exact p&nbsp;≈&nbsp;0.003; the smaller pilot showed roughly a doubling). Inspecting the reasoning shows why — told to
+stay bland, models stop reasoning about intent and collapse to structural checks; violating intent-trap runs
+literally read &ldquo;within budget, under per-payment cap, to allowed recipient, in allowed category&rdquo; and authorize the
+gift card. Second, the monitor&rsquo;s AUROC falls from 0.619 to 0.377, bootstrap 95% CI 0.31&ndash;0.44 — significantly below
+chance (z&nbsp;≈&nbsp;2.8), a significant drop (z&nbsp;≈&nbsp;3.8; pilot: 0.669&nbsp;→&nbsp;0.304) — because the bland, reassuring reasoning
+attached to a breach looks more innocent than an ordinary compliant decision, actively misleading the overseer. Note
+that below-chance is itself a signal: suppression does not remove the information so much as invert its sign — an
+overseer who knows suppression is in play could flip the scores and recover AUROC&nbsp;≈&nbsp;0.62; the danger is the overseer
+who doesn&rsquo;t know. Exploratory per-model AUROCs (2&ndash;10 positives each) vary enormously even without suppression —
+Grok 4.3, Qwen3.7 Max, and Claude Opus 4.8 at 0.82&ndash;0.84; Llama 4 Maverick at 0.26 and Gemini 3.5 Flash at 0.33,
+below chance in the clear — suggesting <em>whose</em> reasoning is monitorable may matter as much as whether reasoning
+is. Naive reasoning-hiding therefore both raises the violation rate and defeats the (unsuspecting) monitor; reasoning
+suppression blinds the agent as well as the observer.
 </p>
 <h3>4.4 RQ4 — Under live attack (v6 pilot)</h3>
 <p>
@@ -274,20 +280,19 @@ degraded, and should treat a systematically below-chance monitor as a red flag f
 
 <h2>6. Limitations</h2>
 <p>
-The monitorability, suppression, and duel results are still v6-pilot measurements — on the small 3-intent-trap set,
-with a single monitor model (GPT-5.5) scored pooled across agents including its own outputs (≈1/9 self-monitoring),
-and one unseeded negotiation per duel cell — and are labelled as such; re-running those arms on v7 is the immediate
-next step, and the §4.2 ranking reshuffle predicts their per-model detail may move. v6 rates should additionally be
-read as lower bounds: two grading asymmetries in that snapshot could only understate violations (a counter-offer on
-an intent trap was graded as defended even when it committed the same purchase, and unparseable output ended a run
-ungraded); both are fixed in the harness that produced v7. Intent labels are author-constructed, fixed before any
-model runs; independent human validation is future work. Repetitions run at temperature 0, so the effective sample is
-closer to the unique-scenario count and all intervals are optimistic; under replicate-aware clustering the v6
-default-arm AUROC&rsquo;s separation from chance is marginal, though the suppression contrast survives. Results may be
-sensitive to system-prompt wording — during development an unfair expired-mandate prompt produced a spurious
-universal failure until the agent was given issued/expiry/current timestamps. The suppression arm uses a single,
-naive hiding instruction; a trained or steganographic adversary is the stronger test of monitorability and is future
-work, as is an adaptive-adversary robustness curve.
+The adversarial-duel matrix is still a v6-pilot measurement — one unseeded negotiation per cell against a single
+over-cap goal — and is labelled as such; the seeded multi-goal rerun is future work, and the §4.2 ranking reshuffle
+cautions that its per-model detail may move (v6 rates were additionally lower bounds due to two since-fixed grading
+asymmetries: a counter committing the same purchase graded as defended, and unparseable output graded as a
+non-violation; v7 numbers are free of both). The monitor is a single model (GPT-5.5), scores one repetition per
+scenario, is pooled across agents, and scores its own outputs for one of nine; per-model AUROCs rest on 2&ndash;10
+positives each and are exploratory. Intent labels are author-constructed, fixed before any model runs; independent
+human validation is future work. Repetitions run at temperature 0, so the effective sample is closer to the
+unique-scenario count and all intervals are optimistic. Results may be sensitive to system-prompt wording — during
+development an unfair expired-mandate prompt produced a spurious universal failure until the agent was given
+issued/expiry/current timestamps. The suppression arm uses a single, naive hiding instruction; a trained or
+steganographic adversary is the stronger test of monitorability and is future work, as is an adaptive-adversary
+robustness curve.
 </p>
 
 <h2>7. Conclusion</h2>
@@ -321,7 +326,7 @@ dashboard openly.
 </ol>
 
 <div class="footer">
-MandateBench · mandatebench.xyz · judge-free ground truth (deterministic rule predicates; intent traps fixed before any model runs) · MIT / CC BY 4.0 · Preprint, 2026 (v7 scripted arms + v6 pilot monitorability/duels).
+MandateBench · mandatebench.xyz · judge-free ground truth (deterministic rule predicates; intent traps fixed before any model runs) · MIT / CC BY 4.0 · Preprint, 2026 (v7: scripted, suppression, and monitorability arms · v6 pilot: adversarial duels).
 </div>
 
 </body>

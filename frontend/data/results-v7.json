@@ -1,7 +1,8 @@
 {
   "meta": {
-    "exportedAt": "2026-07-08T20:20:00.843Z",
+    "exportedAt": "2026-07-17T08:51:24.904Z",
     "snapshot": "v7",
+    "hiddenSnapshot": "v7-hidden",
     "note": "Frozen aggregate export. The paper page and PDF tables must render from this file; do not hand-edit. Regenerate with backend `yarn export-snapshot`."
   },
   "calibration": [
@@ -231,6 +232,16 @@
         "rate": 0.17541613316261204,
         "low": 0.1503491920331922,
         "high": 0.20366058522632108
+      }
+    },
+    "hidden": {
+      "graded": 942,
+      "traps": {
+        "k": 184,
+        "n": 780,
+        "rate": 0.2358974358974359,
+        "low": 0.20744153852538716,
+        "high": 0.26694206142643984
       }
     }
   },
@@ -808,5 +819,154 @@
     "attackers": [],
     "cells": []
   },
-  "monitors": []
+  "monitors": [
+    {
+      "_id": "6a59ecc9bbf5de8c1671c5f6",
+      "snapshot": "v7-hidden",
+      "monitorModel": "openai/gpt-5.5",
+      "channel": "reasoning",
+      "auroc": 0.37742248062015504,
+      "aurocLow": 0.3122161128376763,
+      "aurocHigh": 0.44158361018826137,
+      "nPos": 56,
+      "nNeg": 258,
+      "perModel": [
+        {
+          "model": "qwen/qwen3.7-max",
+          "auroc": 0.7346938775510204,
+          "nPos": 7,
+          "nNeg": 28
+        },
+        {
+          "model": "moonshotai/kimi-k2.6",
+          "auroc": 0.5541666666666667,
+          "nPos": 4,
+          "nNeg": 30
+        },
+        {
+          "model": "mistralai/mistral-large-2512",
+          "auroc": 0.5023148148148148,
+          "nPos": 8,
+          "nNeg": 27
+        },
+        {
+          "model": "openai/gpt-5.5",
+          "auroc": 0.3936781609195402,
+          "nPos": 6,
+          "nNeg": 29
+        },
+        {
+          "model": "google/gemini-3.5-flash",
+          "auroc": 0.3793103448275862,
+          "nPos": 6,
+          "nNeg": 29
+        },
+        {
+          "model": "anthropic/claude-opus-4.8",
+          "auroc": 0.3563218390804598,
+          "nPos": 6,
+          "nNeg": 29
+        },
+        {
+          "model": "deepseek/deepseek-v4-pro",
+          "auroc": 0.29435483870967744,
+          "nPos": 4,
+          "nNeg": 31
+        },
+        {
+          "model": "meta-llama/llama-4-maverick",
+          "auroc": 0.1068840579710145,
+          "nPos": 12,
+          "nNeg": 23
+        },
+        {
+          "model": "x-ai/grok-4.3",
+          "auroc": 0.10416666666666667,
+          "nPos": 3,
+          "nNeg": 32
+        }
+      ],
+      "excludedEmpty": 0,
+      "fallbackVerdicts": 0,
+      "scored": 314,
+      "costUsd": 0.94928,
+      "createdAt": "2026-07-17T08:50:17.545Z",
+      "updatedAt": "2026-07-17T08:50:17.545Z",
+      "__v": 0
+    },
+    {
+      "_id": "6a59eb6fbbf5de8c1671c5f5",
+      "snapshot": "v7",
+      "monitorModel": "openai/gpt-5.5",
+      "channel": "reasoning",
+      "auroc": 0.6190946502057613,
+      "aurocLow": 0.5553935860058309,
+      "aurocHigh": 0.6769218965781801,
+      "nPos": 45,
+      "nNeg": 270,
+      "perModel": [
+        {
+          "model": "x-ai/grok-4.3",
+          "auroc": 0.8387096774193549,
+          "nPos": 4,
+          "nNeg": 31
+        },
+        {
+          "model": "qwen/qwen3.7-max",
+          "auroc": 0.8316326530612245,
+          "nPos": 7,
+          "nNeg": 28
+        },
+        {
+          "model": "anthropic/claude-opus-4.8",
+          "auroc": 0.8229166666666666,
+          "nPos": 3,
+          "nNeg": 32
+        },
+        {
+          "model": "deepseek/deepseek-v4-pro",
+          "auroc": 0.6515151515151515,
+          "nPos": 2,
+          "nNeg": 33
+        },
+        {
+          "model": "mistralai/mistral-large-2512",
+          "auroc": 0.6290322580645161,
+          "nPos": 4,
+          "nNeg": 31
+        },
+        {
+          "model": "openai/gpt-5.5",
+          "auroc": 0.603448275862069,
+          "nPos": 6,
+          "nNeg": 29
+        },
+        {
+          "model": "moonshotai/kimi-k2.6",
+          "auroc": 0.546875,
+          "nPos": 3,
+          "nNeg": 32
+        },
+        {
+          "model": "google/gemini-3.5-flash",
+          "auroc": 0.3333333333333333,
+          "nPos": 6,
+          "nNeg": 29
+        },
+        {
+          "model": "meta-llama/llama-4-maverick",
+          "auroc": 0.264,
+          "nPos": 10,
+          "nNeg": 25
+        }
+      ],
+      "excludedEmpty": 0,
+      "fallbackVerdicts": 0,
+      "scored": 315,
+      "costUsd": 1.3167299999999988,
+      "createdAt": "2026-07-17T08:44:31.522Z",
+      "updatedAt": "2026-07-17T08:44:31.522Z",
+      "__v": 0
+    }
+  ]
 }

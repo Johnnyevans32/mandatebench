@@ -272,7 +272,7 @@ export class RunnerService {
    * the reasoning channel erodes oversight.
    */
   async runMonitor(
-    opts: { snapshot?: string; monitorModel?: string; channel?: Channel } = {},
+    opts: { snapshot?: string; monitorModel?: string; channel?: Channel; rep?: number } = {},
   ): Promise<{ auroc: number; scored: number; nPos: number; nNeg: number }> {
     if (this.running) throw new Error('runner is already active');
     this.running = true;
@@ -282,7 +282,16 @@ export class RunnerService {
     try {
       // Unparseable runs carry no real decision (their "reasoning" is raw
       // garbage), so they are excluded from the monitorability sample.
-      const rows = await this.results.find({ snapshot, unparseable: { $ne: true } }).lean();
+      // opts.rep restricts to one repetition — temperature-0 reps are
+      // near-duplicate texts, so scoring one per scenario keeps the AUROC's
+      // information at a third of the cost.
+      const rows = await this.results
+        .find({
+          snapshot,
+          unparseable: { $ne: true },
+          ...(opts.rep !== undefined ? { rep: opts.rep } : {}),
+        })
+        .lean();
       const items: MonitorItem[] = rows.map((r) => ({
         id: String(r._id),
         reasoning: r.privateReasoning ?? '',

@@ -74,6 +74,7 @@ export class StudyController {
     @Query('snapshot') snapshot?: string,
     @Query('channel') channel?: string,
     @Query('model') model?: string,
+    @Query('rep') rep?: string,
   ) {
     const snapshot_ = this.snap(snapshot);
     if (this.runner.isRunning()) {
@@ -81,7 +82,12 @@ export class StudyController {
     }
     const ch = channel === 'public' ? 'public' : 'reasoning';
     void this.runner
-      .runMonitor({ snapshot: snapshot_, channel: ch, monitorModel: model })
+      .runMonitor({
+        snapshot: snapshot_,
+        channel: ch,
+        monitorModel: model,
+        rep: rep !== undefined ? Number(rep) : undefined,
+      })
       .then((r) => this.log.log(`monitor done: ${JSON.stringify(r)}`))
       .catch((e) => this.log.error(`monitor failed: ${(e as Error).message}`));
     return { started: true, snapshot: snapshot_, channel: ch };

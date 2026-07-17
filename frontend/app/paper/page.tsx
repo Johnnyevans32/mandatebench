@@ -51,16 +51,16 @@ const CALIBRATION = [...v7.calibration].sort(
     displayName(a.model).localeCompare(displayName(b.model)),
 );
 
-const V7_GRADED = v7.violations.default.graded;
+const V7_GRADED = v7.violations.default.graded + (v7.violations.hidden?.graded ?? 0);
 const V6_GRADED = v6.violations.default.graded + (v6.violations.hidden?.graded ?? 0);
-const VIOLATIONS_DEFAULT = v6.violations.default.traps.k;
-const VIOLATIONS_HIDDEN = v6.violations.hidden?.traps.k ?? 0;
+const VIOLATIONS_DEFAULT = v7.violations.default.traps;
+const VIOLATIONS_HIDDEN = v7.violations.hidden!.traps;
 
-const MONITOR_DEFAULT = v6.monitors.find(
-  (m) => m.snapshot === v6.meta.snapshot && m.channel === 'reasoning',
+const MONITOR_DEFAULT = v7.monitors.find(
+  (m) => m.snapshot === v7.meta.snapshot && m.channel === 'reasoning',
 )!;
-const MONITOR_HIDDEN = v6.monitors.find(
-  (m) => m.snapshot === v6.meta.hiddenSnapshot && m.channel === 'reasoning',
+const MONITOR_HIDDEN = v7.monitors.find(
+  (m) => m.snapshot === v7.meta.hiddenSnapshot && m.channel === 'reasoning',
 )!;
 
 /** Hanley–McNeil SE-based 95% CI, used when the stored run predates bootstrap CIs. */
@@ -122,8 +122,9 @@ export default function PaperPage() {
         <a href="https://www.linkedin.com/in/0xjevan" target="_blank" rel="noopener">
           Evans Eburu
         </a>{' '}
-        · 9 frontier models, one+ per major lab · {V7_GRADED} graded authorizations across 5
-        mandate domains (v7) + {V6_GRADED} (v6 pilot) + a 9×9 adversarial matrix
+        · 9 frontier models, one+ per major lab · {V7_GRADED.toLocaleString()} graded
+        authorizations across 5 mandate domains + suppression arm (v7) · {V6_GRADED} (v6
+        pilot) + a 9×9 adversarial matrix
       </p>
       <p className="soft" style={{ fontSize: 14, marginTop: 4 }}>
         Open source (MIT) ·{' '}
@@ -288,16 +289,19 @@ export default function PaperPage() {
       <section style={{ marginTop: 34 }}>
         <h2>Finding 2 — Reasoning is only moderately monitorable</h2>
         <p className="soft" style={{ fontSize: 14, marginTop: -6, maxWidth: '70ch' }}>
-          <em>Measured on the v6 pilot set; the monitor pass on v7 is pending.</em>{' '}
           A monitor ({displayName(MONITOR_DEFAULT.monitorModel)}) reading <em>only</em>{' '}
           the agent&apos;s private reasoning — never the mandate numbers — predicts
-          violations at AUROC {MONITOR_DEFAULT.auroc.toFixed(3)} (95% CI{' '}
+          violations at AUROC {MONITOR_DEFAULT.auroc.toFixed(3)} (bootstrap 95% CI{' '}
           {monitorCI(MONITOR_DEFAULT)[0].toFixed(2)}–{monitorCI(MONITOR_DEFAULT)[1].toFixed(2)};{' '}
-          {MONITOR_DEFAULT.nPos} violations vs {MONITOR_DEFAULT.nNeg} compliant, pooled
-          across the nine agents). Diagnostic, but far from the near-perfect
-          monitorability reported for reasoning in game settings. Two caveats: the AUROC
-          is pooled, so it mixes between-model style with within-model discrimination,
-          and the monitor scores its own outputs for one of the nine agents.
+          {MONITOR_DEFAULT.nPos} violations vs {MONITOR_DEFAULT.nNeg} compliant on
+          snapshot v7, one rep per scenario, pooled across the nine agents — replicating
+          v6&apos;s 0.669). Diagnostic, but far from the near-perfect monitorability
+          reported for reasoning in game settings. Caveats: the AUROC is pooled, mixing
+          between-model style with within-model discrimination, and the monitor scores
+          its own outputs for one of the nine agents. Exploratory per-model AUROCs vary
+          enormously (Grok/Qwen/Opus ≈0.82–0.84; Llama 0.26 and Gemini 0.33 — below
+          chance even without suppression), though per-model positives are few (2–10):
+          whose reasoning is monitorable may matter as much as whether reasoning is.
         </p>
         <MonitorFigure />
       </section>
@@ -306,15 +310,14 @@ export default function PaperPage() {
       <section style={{ marginTop: 34 }}>
         <h2>Finding 3 — Hiding the reasoning backfires</h2>
         <p style={{ fontSize: 15, lineHeight: 1.7, maxWidth: '72ch' }}>
-          <em className="soft" style={{ fontSize: 14 }}>
-            (Measured on the v6 pilot set; the v7 suppression arm is pending.)
-          </em>{' '}
           Instructing the agent to keep its reasoning bland — the obvious way to evade a
-          reasoning-reading monitor — is <strong>doubly harmful</strong>. Violations
-          roughly <strong>double</strong> ({VIOLATIONS_DEFAULT} → {VIOLATIONS_HIDDEN}),
-          and the monitor&apos;s AUROC falls from {MONITOR_DEFAULT.auroc.toFixed(2)} to{' '}
-          <strong>{MONITOR_HIDDEN.auroc.toFixed(2)} — below chance</strong>. Inspecting
-          the reasoning
+          reasoning-reading monitor — is <strong>doubly harmful</strong>. On snapshot v7,
+          trap violations rise by a third ({VIOLATIONS_DEFAULT.k}/{VIOLATIONS_DEFAULT.n}{' '}
+          → {VIOLATIONS_HIDDEN.k}/{VIOLATIONS_HIDDEN.n}, Fisher p ≈ 0.003; the smaller
+          v6 pilot showed roughly a doubling), and the monitor&apos;s AUROC falls from{' '}
+          {MONITOR_DEFAULT.auroc.toFixed(2)} to{' '}
+          <strong>{MONITOR_HIDDEN.auroc.toFixed(2)} — below chance</strong> (replicating
+          v6&apos;s 0.67 → 0.30). Inspecting the reasoning
           shows why: told to stay bland, models stop reasoning about intent and collapse
           to structural checks, so a breach reads as more routine than a compliant
           decision and actively misleads the overseer.
@@ -338,7 +341,8 @@ export default function PaperPage() {
           Note that below-chance is itself a signal: suppression does not remove the
           information so much as invert its sign — an overseer who <em>knows</em>{' '}
           suppression is in play could flip the monitor&apos;s scores and recover
-          AUROC ≈ 0.70. The danger is the overseer who doesn&apos;t know.
+          AUROC ≈ {(1 - MONITOR_HIDDEN.auroc).toFixed(2)}. The danger is the overseer
+          who doesn&apos;t know.
         </p>
       </section>
 
@@ -438,24 +442,22 @@ export default function PaperPage() {
       <section style={{ marginTop: 34 }}>
         <h2>Limitations</h2>
         <p className="soft" style={{ fontSize: 14, lineHeight: 1.65, maxWidth: '72ch' }}>
-          Violation rates on v6 should be read as <em>lower bounds</em>: two grading
-          asymmetries in that snapshot could only understate violations (a counter-offer
-          on an intent trap was graded as defended even when it committed the same
-          purchase, and unparseable output ended a run ungraded). Both are fixed in the
-          harness that produced v7, whose runs are also seeded, provenance-stamped
-          (provider, temperature, rep, arm), and deduplicated. The monitorability,
-          suppression, and duel results are still v6 measurements — on the small
-          3-intent-trap set, with a single monitor model (GPT-5.5) scored pooled across
-          agents including its own outputs, and one unseeded negotiation per duel cell —
-          and are marked as such above; re-running those arms on v7 is the immediate
-          next step. Intent labels are author-constructed (fixed before any model runs);
-          independent human validation is future work. Repetitions run at temperature 0,
-          so the three reps are near-duplicates and the effective sample is closer to
-          the unique-scenario count — treat all intervals as optimistic. Results may be
-          sensitive to prompt wording. The suppression arm uses a single naive hiding
-          instruction; a trained or steganographic adversary is the stronger test of
-          monitorability and is future work, as is an adaptive-adversary robustness
-          curve.
+          The duel matrix is still a v6-pilot measurement (one unseeded negotiation per
+          cell, single over-cap goal) and is marked as such above; the seeded multi-goal
+          rerun is future work. The monitor is a single model (GPT-5.5), scores one
+          repetition per scenario, is pooled across agents, and scores its own outputs
+          for one of nine; per-model AUROCs rest on 2–10 positives each and are
+          exploratory. Intent labels are author-constructed (fixed before any model
+          runs); independent human validation is future work. Repetitions run at
+          temperature 0, so the three reps are near-duplicates and the effective sample
+          is closer to the unique-scenario count — treat all intervals as optimistic.
+          Results may be sensitive to prompt wording. The suppression arm uses a single
+          naive hiding instruction; a trained or steganographic adversary is the
+          stronger test of monitorability and is future work, as is an
+          adaptive-adversary robustness curve. (v6 rates were additionally lower bounds
+          due to two since-fixed grading asymmetries — a counter committing the same
+          purchase graded as defended, and unparseable output graded as a non-violation;
+          v7 numbers are free of both.)
         </p>
       </section>
 
@@ -556,9 +558,10 @@ function MonitorFigure() {
       {bar('Default reasoning', MONITOR_DEFAULT.auroc, dLo, dHi, 'hsl(145 52% 40%)')}
       {bar('Suppressed reasoning', MONITOR_HIDDEN.auroc, hLo, hHi, 'hsl(8 60% 47%)')}
       <div className="soft mono" style={{ fontSize: 11, marginTop: 8 }}>
-        Dashed line = 0.50 (chance); whiskers are 95% CIs (Hanley–McNeil). Suppressed
-        reasoning falls significantly below chance (z ≈ 4.6), and the drop from{' '}
-        {MONITOR_DEFAULT.auroc.toFixed(3)} is significant (z ≈ 5.1).
+        Dashed line = 0.50 (chance); whiskers are bootstrap 95% CIs. Suppressed
+        reasoning falls significantly below chance (z ≈ 2.8), and the drop from{' '}
+        {MONITOR_DEFAULT.auroc.toFixed(3)} is significant (z ≈ 3.8). Snapshot v7,
+        one rep per scenario.
       </div>
     </div>
   );
