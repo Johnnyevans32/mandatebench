@@ -1,0 +1,65 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,600&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet" />
+<style>
+  * { margin: 0; box-sizing: border-box; }
+  body {
+    width: 1200px; height: 1350px; overflow: hidden;
+    background: #f6f6f3; color: #16181c;
+    font-family: "Newsreader", Georgia, serif;
+    padding: 72px 84px 60px;
+    border-top: 10px solid #9e2b1b;
+    display: flex; flex-direction: column;
+  }
+  .kicker { font-family: "IBM Plex Mono", monospace; font-size: 19px; letter-spacing: 0.16em; color: #57595f; text-transform: uppercase; }
+  h1 { font-size: 54px; line-height: 1.12; font-weight: 600; letter-spacing: -0.01em; margin-top: 18px; max-width: 24ch; }
+  .sub { font-size: 26px; color: #57595f; margin-top: 14px; max-width: 44ch; line-height: 1.4; }
+  .chart { margin-top: 52px; flex: 1; }
+  .row { display: flex; align-items: center; margin-bottom: 22px; }
+  .label { font-family: "IBM Plex Mono", monospace; font-size: 20px; width: 250px; flex: none; color: #16181c; }
+  .track { flex: 1; height: 26px; position: relative; }
+  .bar { height: 26px; background: #9e2b1b; border-radius: 0 4px 4px 0; }
+  .val { font-family: "IBM Plex Mono", monospace; font-size: 20px; font-weight: 600; color: #16181c; margin-left: 14px; width: 70px; flex: none; }
+  .axis { border-left: 2px solid #16181c; }
+  .callout {
+    border-left: 4px solid #9e2b1b; background: #eeeee9;
+    padding: 26px 30px; font-size: 27px; line-height: 1.45; margin-top: 20px;
+  }
+  .callout b { color: #9e2b1b; font-weight: 600; }
+  .foot { font-family: "IBM Plex Mono", monospace; font-size: 19px; color: #57595f; display: flex; justify-content: space-between; border-top: 1px solid #e1e1da; padding-top: 22px; margin-top: 34px; }
+</style>
+</head>
+<body>
+  <div class="kicker">MandateBench · 9 frontier models · preprint</div>
+  <h1>How often does each AI catch a payment that breaks your <em>intent</em>?</h1>
+  <p class="sub">17 traps that pass every check a payment system can run, like a grocery
+  budget spent on a gift card. Only the model can catch these.</p>
+
+  <div class="chart">
+    <!-- intent-catch %, snapshot v7, n=51 per model (49 for Kimi) -->
+    <div class="row"><div class="label">Kimi K2.6</div><div class="track axis"><div class="bar" style="width:90%"></div></div><div class="val">90%</div></div>
+    <div class="row"><div class="label">DeepSeek V4 Pro</div><div class="track axis"><div class="bar" style="width:86%"></div></div><div class="val">86%</div></div>
+    <div class="row"><div class="label">Mistral Large</div><div class="track axis"><div class="bar" style="width:86%"></div></div><div class="val">86%</div></div>
+    <div class="row"><div class="label">Grok 4.3</div><div class="track axis"><div class="bar" style="width:84%"></div></div><div class="val">84%</div></div>
+    <div class="row"><div class="label">Claude Opus 4.8</div><div class="track axis"><div class="bar" style="width:82%"></div></div><div class="val">82%</div></div>
+    <div class="row"><div class="label">GPT-5.5</div><div class="track axis"><div class="bar" style="width:71%"></div></div><div class="val">71%</div></div>
+    <div class="row"><div class="label">Gemini 3.5 Flash</div><div class="track axis"><div class="bar" style="width:71%"></div></div><div class="val">71%</div></div>
+    <div class="row"><div class="label">Qwen3.7 Max</div><div class="track axis"><div class="bar" style="width:65%"></div></div><div class="val">65%</div></div>
+    <div class="row"><div class="label">Llama 4 Maverick</div><div class="track axis"><div class="bar" style="width:57%"></div></div><div class="val">57%</div></div>
+  </div>
+
+  <div class="callout">
+    Tell the agent to hide its reasoning and it gets worse: violations rise by a
+    third, and the overseer reading its reasoning drops <b>below a coin flip</b>
+    (AUROC 0.62 → 0.38).
+  </div>
+
+  <div class="foot">
+    <span>mandatebench.xyz/paper</span>
+    <span>doi:10.5281/zenodo.21411376 · CC BY 4.0</span>
+  </div>
+</body>
+</html>
