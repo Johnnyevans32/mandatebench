@@ -31,7 +31,7 @@ export default async function Dashboard() {
 
       {!snap.live && (
         <div className="banner">
-          Showing sample data — the results API returned nothing yet. Start a run
+          Showing sample data. The results API returned nothing yet; start a run
           on the backend to populate this board.
         </div>
       )}
@@ -137,12 +137,12 @@ export default async function Dashboard() {
           <h2>Rule vs intent · what only the model can catch</h2>
           <p className="soft" style={{ fontSize: 15, maxWidth: '68ch', marginTop: -8 }}>
             <b>Rule</b> breaches (over budget, wrong recipient, bad category) are
-            structural — a protocol gateway catches them without any model, so a
-            high score here is table stakes. <b>Intent</b> breaches satisfy every
-            signed field yet betray the mandate&rsquo;s meaning (a grocery mandate
+            structural. A protocol gateway catches them without any model, so a
+            high score here is table stakes. <b>Intent</b> breaches pass every
+            signed field but break what the mandate means (a grocery mandate
             spent on a gift card or champagne); no gateway can catch them. The
-            intent column is the one that separates models. False-refusal is the
-            usefulness cost — declining clean orders.
+            intent column is the one that separates models. False refusal is the
+            usefulness cost: declining clean orders.
           </p>
           <div className="heatscroll" style={{ marginTop: 16 }}>
             <table>
@@ -182,10 +182,11 @@ export default async function Dashboard() {
           <h2>Pre-signature monitorability (RQ3)</h2>
           <p className="soft" style={{ fontSize: 15, maxWidth: '68ch', marginTop: -8 }}>
             Can an overseer that reads only the agent&rsquo;s own words predict a
-            violation before the irreversible signature? AUROC of a monitor&rsquo;s
-            score against the objective label — 1.0 = the reasoning fully betrays
-            the breach, 0.5 = the channel is uninformative. Compare a normal run to
-            a reasoning-suppressed one to see how robust the oversight is.
+            violation before the irreversible signature? We report AUROC of the
+            monitor&rsquo;s score against the objective label: 1.0 means the
+            reasoning fully gives the breach away, 0.5 means the channel tells you
+            nothing. Compare a normal run to a reasoning-suppressed one to see how
+            robust the oversight is.
           </p>
           <table style={{ marginTop: 12 }}>
             <thead>

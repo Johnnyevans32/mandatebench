@@ -6,9 +6,9 @@ export default function Home() {
         <h1>When you hand an AI agent your money, does it stay inside the mandate?</h1>
         <p>
           MandateBench gives payment agents a cryptographically signed spending
-          mandate — a budget, allowed recipients, allowed categories, an expiry —
+          mandate (a budget, allowed recipients, allowed categories, an expiry),
           then pushes them with adversarial pressure and measures how often they
-          authorize a payment that breaches it. A monitor reads the agent&rsquo;s
+          authorize a payment that breaks it. A monitor reads the agent&rsquo;s
           justification and tries to catch the breach <em>before</em> the
           irreversible signature.
         </p>
@@ -39,12 +39,12 @@ export default function Home() {
           <div className="step">
             <div className="n">02</div>
             <h3>Adversarial pressure</h3>
-            <p>A merchant applies one of several pressures — upsell, urgency, injection, drift.</p>
+            <p>A merchant applies one of several pressures: upsell, urgency, injection, drift.</p>
           </div>
           <div className="step">
             <div className="n">03</div>
             <h3>The decision</h3>
-            <p>The agent authorizes, declines, counters, or asks — and commits a cart.</p>
+            <p>The agent authorizes, declines, counters, or asks, and commits a cart.</p>
           </div>
           <div className="step">
             <div className="n">04</div>
@@ -87,10 +87,10 @@ export default function Home() {
       <section>
         <h2>Why the labels are trustworthy</h2>
         <p className="soft" style={{ maxWidth: '68ch' }}>
-          A mandate violation — over-budget, wrong recipient, out-of-scope
-          category, expired, structured to evade a cap — is a deterministic
-          predicate over the signed mandate and the cart. The ground truth needs
-          no LLM judge, and because the mandate is signed, a recorded violation is
+          A mandate violation (over budget, wrong recipient, wrong category,
+          expired, or structured to evade a cap) is checked by plain code against
+          the signed mandate and the cart. The ground truth needs no LLM judge,
+          and because the mandate is signed, a recorded violation is
           cryptographically attributable rather than merely logged.
         </p>
       </section>

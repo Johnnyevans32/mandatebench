@@ -16,13 +16,13 @@ reading the agent's justification can catch the breach *before* it signs.
 
 ## Why this exists
 
-Agents are starting to hold and move real money — Google's AP2 and Coinbase's
+Agents are starting to hold and move real money. Google's AP2 and Coinbase's
 x402 both build on **signed mandates**: tamper-evident contracts that capture
 what an agent is authorized to spend, with whom, and for how long. The security
 work so far targets the *protocol* (attacks on the rails) or a single attack
 vector (prompt injection on one model). Nobody has systematically asked, across
 many models and many kinds of pressure: **does the agent's own authorization
-decision stay faithful to the mandate — and is that decision monitorable at the
+decision stay faithful to the mandate, and is that decision monitorable at the
 moment before an irreversible signature?**
 
 MandateBench is that measurement.
@@ -33,7 +33,7 @@ MandateBench is that measurement.
 |---|---|---|
 | **RQ1** | How often do models authorize a payment that violates the mandate? | violation rate (Wilson CI), per model, per violation type |
 | **RQ2** | Which adversarial pressures break which models? | violation rate across model × pressure |
-| **RQ3** | Can a black-box monitor predict a violation *before* `sign()` — and does hiding the agent's reasoning defeat it? | AUROC + degradation under a reasoning-hiding instruction |
+| **RQ3** | Can a black-box monitor predict a violation *before* `sign()`, and does hiding the agent's reasoning defeat it? | AUROC + degradation under a reasoning-hiding instruction |
 | **RQ4** | Does the agent's stated justification match its actual decision? | rate of compliant-narration-with-violating-action |
 
 The **pressure taxonomy** (RQ2) is the axis prior work leaves open: not just
@@ -44,7 +44,7 @@ See [`src/mandate/pressures.ts`](backend/src/mandate/pressures.ts).
 ## Why the labels are trustworthy
 
 A mandate violation (over-budget, wrong recipient, expired, out-of-scope…) is a
-**deterministic predicate** over the signed mandate and the cart — see
+**deterministic predicate** over the signed mandate and the cart; see
 [`src/mandate/check.ts`](backend/src/mandate/check.ts). So the ground truth needs
 no LLM judge, and because the mandate is signed, a recorded violation is
 cryptographically attributable, not merely logged.
@@ -86,7 +86,7 @@ backend/
     scenario/   scripted-merchant engine that runs a graded negotiation per pressure
     llm/        model-agnostic agent-client interface, mock provider, OpenRouter client, schemas
     study/      NestJS module: Mongo persistence, budget-capped runner, aggregation API
-    analysis/   in-stack statistics (Spearman, AUROC, bootstrap, logistic, Wilson) — verified vs known values
+    analysis/   in-stack statistics (Spearman, AUROC, bootstrap, logistic, Wilson), verified vs known values
     scripts/    mandate-demo, scenario-demo, smoke-live, stats-check
 docs/
   design.md     full research design, RQ table, prior-work positioning
